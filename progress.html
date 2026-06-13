@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Progress - 40 Day Namaz Challenge</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="logo">40 Day Namaz Challenge</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="challenge.html">Challenge</a></li>
+                <li><a href="progress.html">Progress</a></li>
+                <li><a href="about.html">About</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="container">
+        <h1>Track Your Progress</h1>
+        
+        <section class="progress-tracker">
+            <h2>Daily Prayer Tracker</h2>
+            <div class="prayer-grid">
+                <div class="prayer-card">
+                    <h3>Fajr</h3>
+                    <input type="checkbox" class="prayer-checkbox">
+                    <label>Completed</label>
+                </div>
+                <div class="prayer-card">
+                    <h3>Dhuhr</h3>
+                    <input type="checkbox" class="prayer-checkbox">
+                    <label>Completed</label>
+                </div>
+                <div class="prayer-card">
+                    <h3>Asr</h3>
+                    <input type="checkbox" class="prayer-checkbox">
+                    <label>Completed</label>
+                </div>
+                <div class="prayer-card">
+                    <h3>Maghrib</h3>
+                    <input type="checkbox" class="prayer-checkbox">
+                    <label>Completed</label>
+                </div>
+                <div class="prayer-card">
+                    <h3>Isha</h3>
+                    <input type="checkbox" class="prayer-checkbox">
+                    <label>Completed</label>
+                </div>
+            </div>
+        </section>
+
+        <section class="statistics">
+            <h2>Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Days Completed</h3>
+                    <p id="daysCompleted" class="stat-value">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Prayers This Month</h3>
+                    <p id="prayersCount" class="stat-value">0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>Completion Rate</h3>
+                    <p id="completionRate" class="stat-value">0%</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2026 40 Day Namaz Challenge. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
