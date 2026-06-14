@@ -3,6 +3,10 @@
 const SUPABASE_URL = 'https://aoqnqcqhkeqzfbackzpk.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvcW5xY3Foa2VxemZiYWNrenBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0MjE4MzgsImV4cCI6MjA5Njk5NzgzOH0.aRxSz4NoRUgoY5bi25k2pyc34PPLkaDCJGip7R4K7go';
 
+if (!window.supabase) {
+    throw new Error('Supabase library not loaded. Make sure index.html includes https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2 before app.js');
+}
+
 const { createClient } = window.supabase;
 
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
