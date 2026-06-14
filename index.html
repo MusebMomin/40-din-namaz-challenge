@@ -3,56 +3,302 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>40 Day Namaz Challenge</title>
+    <title>40-Day Namaz Challenge</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- Navigation -->
     <nav class="navbar">
         <div class="container">
-            <div class="logo">40 Day Namaz Challenge</div>
-            <ul class="nav-links">
-                <li><a href="index.html">Home</a></li>
-                <li><a href="challenge.html">Challenge</a></li>
-                <li><a href="progress.html">Progress</a></li>
-                <li><a href="about.html">About</a></li>
+            <div class="logo">40-Day Namaz Challenge</div>
+            <ul class="nav-menu">
+                <li><a href="#" id="nav-home">Home</a></li>
+                <li><a href="#" id="nav-dashboard" style="display:none;">Dashboard</a></li>
+                <li><a href="#" id="nav-leaderboard" style="display:none;">Leaderboard</a></li>
+                <li><a href="#" id="nav-logout" style="display:none;">Logout</a></li>
+                <li><a href="#" id="nav-login">Login</a></li>
             </ul>
         </div>
     </nav>
 
-    <header class="hero">
-        <div class="container">
-            <h1>Welcome to the 40 Day Namaz Challenge</h1>
-            <p>Transform your spiritual journey with consistent daily prayers</p>
-            <a href="challenge.html" class="btn btn-primary">Start Challenge</a>
-        </div>
-    </header>
+    <div class="container">
+        <!-- Home/Landing Page -->
+        <section id="home-page" class="page active">
+            <div class="hero">
+                <h1>40-Day Namaz Challenge</h1>
+                <p>A spiritual journey to strengthen your connection with Allah through consistent prayer</p>
+                <div class="challenge-info">
+                    <div class="info-card">
+                        <h3>Challenge Duration</h3>
+                        <p>40 consecutive days of Namaz</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>Checkpoints</h3>
+                        <p>5-day checkpoints throughout the journey</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>Rules</h3>
+                        <p>2 missed Jamat prayers reset to previous checkpoint</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>Prize</h3>
+                        <p>Top 5 winners get a special trip</p>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="start-btn">Get Started</button>
+            </div>
 
-    <section class="features">
-        <div class="container">
-            <h2>Why Join the Challenge?</h2>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <h3>Build Consistency</h3>
-                    <p>Develop a strong habit of daily prayer over 40 days</p>
+            <!-- Challenge Timeline -->
+            <section class="timeline">
+                <h2>Challenge Roadmap</h2>
+                <div class="timeline-container">
+                    <div class="timeline-item">
+                        <div class="timeline-marker">Days 1-5</div>
+                        <div class="timeline-content">Foundation</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker">Days 6-10</div>
+                        <div class="timeline-content">Building Habit</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker">Days 11-15</div>
+                        <div class="timeline-content">Checkpoint 1</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker">Days 16-20</div>
+                        <div class="timeline-content">Strengthening</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker">Days 21-25</div>
+                        <div class="timeline-content">Checkpoint 2</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker">Days 26-30</div>
+                        <div class="timeline-content">Committed</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker">Days 31-35</div>
+                        <div class="timeline-content">Checkpoint 3</div>
+                    </div>
+                    <div class="timeline-item">
+                        <div class="timeline-marker">Days 36-40</div>
+                        <div class="timeline-content">Final Push</div>
+                    </div>
                 </div>
-                <div class="feature-card">
-                    <h3>Spiritual Growth</h3>
-                    <p>Deepen your connection with Allah through regular worship</p>
+            </section>
+
+            <!-- Leaderboard Preview -->
+            <section class="leaderboard-preview">
+                <h2>Current Participants</h2>
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Name</th>
+                            <th>Current Streak</th>
+                            <th>Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody id="preview-leaderboard">
+                        <tr>
+                            <td colspan="4" class="no-data">Loading participants...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </section>
+
+        <!-- Login Page -->
+        <section id="login-page" class="page">
+            <div class="auth-container">
+                <h2>Login / Register</h2>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="full-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login / Register</button>
+                </form>
+                <p class="auth-note">Your account will be pending admin approval</p>
+            </div>
+        </section>
+
+        <!-- Dashboard Page -->
+        <section id="dashboard-page" class="page">
+            <div class="dashboard">
+                <h2>My Dashboard</h2>
+                
+                <!-- User Status -->
+                <div class="user-status" id="user-status">
+                    <h3 id="status-message">Waiting for Admin Approval...</h3>
+                    <p id="status-detail"></p>
                 </div>
-                <div class="feature-card">
-                    <h3>Community Support</h3>
-                    <p>Join others on the same spiritual journey</p>
+
+                <!-- Approval Pending Message -->
+                <div id="approval-pending" class="approval-message">
+                    <p>Your account is pending admin approval. You will be able to submit entries once approved.</p>
+                </div>
+
+                <!-- Active Challenge Section (shown after approval) -->
+                <div id="active-challenge" class="active-challenge" style="display:none;">
+                    <div class="streak-info">
+                        <h3>Your Progress</h3>
+                        <div class="streak-display">
+                            <div class="streak-number" id="current-streak">0</div>
+                            <div class="streak-label">Day Streak</div>
+                        </div>
+                    </div>
+
+                    <!-- Salah Entry Form -->
+                    <div class="salah-entry">
+                        <h3>Today's Salah Entry</h3>
+                        <div class="date-display" id="today-date"></div>
+                        <form id="salah-form">
+                            <div class="salah-list">
+                                <div class="salah-item">
+                                    <label>Fajr</label>
+                                    <div class="salah-options">
+                                        <select name="fajr" required>
+                                            <option value="">Select...</option>
+                                            <option value="jamat">Jamat</option>
+                                            <option value="no-jamat">No Jamat</option>
+                                            <option value="qaza">Qaza</option>
+                                        </select>
+                                        <textarea name="fajr-comment" placeholder="Comment (required for Qaza)" class="qaza-comment"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="salah-item">
+                                    <label>Zuhr</label>
+                                    <div class="salah-options">
+                                        <select name="zuhr" required>
+                                            <option value="">Select...</option>
+                                            <option value="jamat">Jamat</option>
+                                            <option value="no-jamat">No Jamat</option>
+                                            <option value="qaza">Qaza</option>
+                                        </select>
+                                        <textarea name="zuhr-comment" placeholder="Comment (required for Qaza)" class="qaza-comment"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="salah-item">
+                                    <label>Asr</label>
+                                    <div class="salah-options">
+                                        <select name="asr" required>
+                                            <option value="">Select...</option>
+                                            <option value="jamat">Jamat</option>
+                                            <option value="no-jamat">No Jamat</option>
+                                            <option value="qaza">Qaza</option>
+                                        </select>
+                                        <textarea name="asr-comment" placeholder="Comment (required for Qaza)" class="qaza-comment"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="salah-item">
+                                    <label>Maghrib</label>
+                                    <div class="salah-options">
+                                        <select name="maghrib" required>
+                                            <option value="">Select...</option>
+                                            <option value="jamat">Jamat</option>
+                                            <option value="no-jamat">No Jamat</option>
+                                            <option value="qaza">Qaza</option>
+                                        </select>
+                                        <textarea name="maghrib-comment" placeholder="Comment (required for Qaza)" class="qaza-comment"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="salah-item">
+                                    <label>Isha</label>
+                                    <div class="salah-options">
+                                        <select name="isha" required>
+                                            <option value="">Select...</option>
+                                            <option value="jamat">Jamat</option>
+                                            <option value="no-jamat">No Jamat</option>
+                                            <option value="qaza">Qaza</option>
+                                        </select>
+                                        <textarea name="isha-comment" placeholder="Comment (required for Qaza)" class="qaza-comment"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-info">
+                                <p>✓ Jamat: Prayed with congregation</p>
+                                <p>✓ No Jamat: Prayed alone</p>
+                                <p>✓ Qaza: Makeup prayer (comment required)</p>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">Submit Today's Entry</button>
+                        </form>
+                    </div>
+
+                    <!-- Lifeliner -->
+                    <div class="lifeliner">
+                        <h3>Lifeliner</h3>
+                        <p>3 Days Makeup allowed (use wisely!)</p>
+                        <div class="lifeliner-count" id="lifeliner-count">3 remaining</div>
+                        <button class="btn btn-secondary" id="use-lifeliner-btn">Use Lifeliner</button>
+                    </div>
+                </div>
+
+                <!-- Challenge History -->
+                <div id="history-section">
+                    <h3>Your History</h3>
+                    <div class="history-table">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Fajr</th>
+                                    <th>Zuhr</th>
+                                    <th>Asr</th>
+                                    <th>Maghrib</th>
+                                    <th>Isha</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body">
+                                <tr>
+                                    <td colspan="7" class="no-data">No entries yet</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <footer>
-        <div class="container">
-            <p>&copy; 2026 40 Day Namaz Challenge. All rights reserved.</p>
-        </div>
-    </footer>
+        <!-- Leaderboard Page -->
+        <section id="leaderboard-page" class="page">
+            <h2>Leaderboard - 40-Day Namaz Challenge</h2>
+            <div class="leaderboard">
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Name</th>
+                            <th>Days Completed</th>
+                            <th>Current Streak</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body">
+                        <tr>
+                            <td colspan="5" class="no-data">Loading leaderboard...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
 
-    <script src="script.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>
