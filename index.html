@@ -10,12 +10,15 @@
     <!-- Navigation -->
     <nav class="navbar">
         <div class="container">
-            <div class="logo">40-Day Namaz Challenge <span id="admin-badge" class="admin-badge" style="display:none;">ADMIN</span></div>
+            <div class="logo">
+                40-Day Namaz Challenge
+                <span id="admin-badge" class="admin-badge" style="display:none;">ADMIN</span>
+            </div>
             <ul class="nav-menu">
                 <li><a href="#" id="nav-home">Home</a></li>
                 <li><a href="#" id="nav-dashboard" style="display:none;">Dashboard</a></li>
                 <li><a href="#" id="nav-admin-dashboard" style="display:none;">Admin Panel</a></li>
-                <li><a href="#" id="nav-leaderboard" style="display:none;">Leaderboard</a></li>
+                <li><a href="#" id="nav-leaderboard">Leaderboard</a></li>
                 <li><a href="#" id="nav-logout" style="display:none;">Logout</a></li>
                 <li><a href="#" id="nav-admin-logout" style="display:none;">Logout</a></li>
                 <li><a href="#" id="nav-login">User Login</a></li>
@@ -30,6 +33,7 @@
             <div class="hero">
                 <h1>40-Day Namaz Challenge</h1>
                 <p>A spiritual journey to strengthen your connection with Allah through consistent prayer</p>
+
                 <div class="challenge-info">
                     <div class="info-card">
                         <h3>Challenge Duration</h3>
@@ -48,6 +52,7 @@
                         <p>Top 5 winners get a special trip</p>
                     </div>
                 </div>
+
                 <button class="btn btn-primary" id="start-btn">Get Started</button>
             </div>
 
@@ -140,8 +145,8 @@
                 <h2>🔐 Admin Login</h2>
                 <form id="admin-login-form">
                     <div class="form-group">
-                        <label>Username</label>
-                        <input type="text" id="admin-username" required>
+                        <label>Admin Email</label>
+                        <input type="email" id="admin-username" required>
                     </div>
                     <div class="form-group">
                         <label>Password</label>
@@ -149,7 +154,7 @@
                     </div>
                     <button type="submit" class="btn btn-primary">Login</button>
                 </form>
-                <p class="auth-note">Admin access only</p>
+                <p class="auth-note">Use your Supabase admin email and password</p>
             </div>
         </section>
 
@@ -157,7 +162,7 @@
         <section id="dashboard-page" class="page">
             <div class="dashboard">
                 <h2>My Dashboard</h2>
-                
+
                 <!-- User Status -->
                 <div class="user-status" id="user-status">
                     <h3 id="status-message">Waiting for Admin Approval...</h3>
@@ -169,7 +174,7 @@
                     <p>Your account is pending admin approval. You will be able to submit entries once approved.</p>
                 </div>
 
-                <!-- Active Challenge Section (shown after approval) -->
+                <!-- Active Challenge Section -->
                 <div id="active-challenge" class="active-challenge" style="display:none;">
                     <div class="streak-info">
                         <h3>Your Progress</h3>
@@ -360,6 +365,7 @@
         </section>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
 </body>
 </html>
