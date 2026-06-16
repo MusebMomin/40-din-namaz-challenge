@@ -3,7 +3,7 @@ const SUPABASE_URL = config.url || '';
 const SUPABASE_ANON_KEY = config.anonKey || '';
 
 if (!window.supabase) {
-    throw new Error('Supabase library not loaded. Include the CDN script before app_new.js');
+    throw new Error('Supabase library not loaded. Include the CDN script before app.js');
 }
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
