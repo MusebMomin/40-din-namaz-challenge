@@ -1,414 +1,358 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>40-Day Namaz Challenge</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>40-Day Namaz Challenge</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="container nav-inner">
-            <div class="logo">40-Day Namaz Challenge <span id="admin-badge" class="admin-badge hidden">ADMIN</span></div>
-            <ul class="nav-menu">
-                <li><a href="#" id="nav-home">Home</a></li>
-                <li><a href="#" id="nav-login">Login</a></li>
-                <li><a href="#" id="nav-register">Register</a></li>
-                <li><a href="#" id="nav-dashboard" class="hidden">Dashboard</a></li>
-                <li><a href="#" id="nav-admin-dashboard" class="hidden">Admin Panel</a></li>
-                <li><a href="#" id="nav-leaderboard">Leaderboard</a></li>
-                <li><a href="#" id="nav-logout" class="hidden">Logout</a></li>
-            </ul>
+  <div id="global-loader" class="global-loader hidden">
+    <div class="loader-card">
+      <div class="spinner"></div>
+      <p id="loader-text">Loading...</p>
+    </div>
+  </div>
+
+  <div id="popup-modal" class="popup-backdrop hidden">
+    <div class="popup-card">
+      <div class="popup-emoji" id="popup-emoji">✨</div>
+      <h3 id="popup-title">Done</h3>
+      <p id="popup-message">Action completed.</p>
+      <div class="popup-actions" id="popup-actions">
+        <button class="btn btn-primary" id="popup-ok-btn">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <nav class="navbar">
+    <div class="container nav-inner">
+      <div class="logo">40-Day Namaz Challenge <span id="admin-badge" class="admin-badge hidden">ADMIN</span></div>
+      <ul class="nav-menu">
+        <li><a href="#" id="nav-home">Home</a></li>
+        <li><a href="#" id="nav-login">Login</a></li>
+        <li><a href="#" id="nav-register">Register</a></li>
+        <li><a href="#" id="nav-dashboard" class="hidden">Dashboard</a></li>
+        <li><a href="#" id="nav-admin-dashboard" class="hidden">Admin Panel</a></li>
+        <li><a href="#" id="nav-leaderboard">Leaderboard</a></li>
+        <li><a href="#" id="nav-logout" class="hidden">Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="container main-space">
+    <section id="home-page" class="page active">
+      <div class="hero-card">
+        <div class="hero-left">
+          <h1>40-Day Namaz Challenge</h1>
+          <p>Build consistency, protect your streak, and move forward one Salah at a time.</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" id="hero-login-btn">Login</button>
+            <button class="btn btn-secondary" id="hero-register-btn">Register</button>
+          </div>
         </div>
-    </nav>
+        <div class="hero-right">
+          <div class="mini-path">
+            <div class="curve a"></div>
+            <div class="curve b"></div>
+            <div class="curve c"></div>
+            <span class="pin pin-1">📍</span>
+            <span class="pin pin-2">📍</span>
+            <span class="pin pin-3">📍</span>
+            <span class="pin pin-4">🏁</span>
+          </div>
+        </div>
+      </div>
 
-    <main class="container">
-        <section id="home-page" class="page active">
-            <div class="hero">
-                <h1>40-Day Namaz Challenge</h1>
-                <p>Track your Salah daily, protect your streak, earn lifelines, and monitor community progress.</p>
-                <div class="hero-actions">
-                    <button class="btn btn-primary" id="hero-login-btn">Login</button>
-                    <button class="btn btn-secondary" id="hero-register-btn">Register</button>
-                </div>
+      <div class="card compact-card">
+        <div class="section-title-row">
+          <h2>Current Participants</h2>
+          <span class="section-subtle">Top streaks right now</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table leaderboard-simple">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Name</th>
+                <th>Streak</th>
+              </tr>
+            </thead>
+            <tbody id="preview-leaderboard">
+              <tr><td colspan="3" class="no-data">Loading participants...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="login-page" class="page">
+      <div class="auth-shell">
+        <div class="card auth-card">
+          <h2>Welcome Back</h2>
+          <p class="muted">Login with your username or email and password.</p>
+          <form id="login-form">
+            <div class="form-group">
+              <label for="login-identifier">Username or Email</label>
+              <input type="text" id="login-identifier" required>
             </div>
-
-            <section class="grid cards-4">
-                <article class="card">
-                    <h3>Authentication</h3>
-                    <p>Login with username or email plus password. Register with username, email, and password.</p>
-                </article>
-                <article class="card">
-                    <h3>Lifelines</h3>
-                    <p>Start with 0 lifelines. Earn them through perfect Takbeer-e-Ula days and streak milestones.</p>
-                </article>
-                <article class="card">
-                    <h3>Streak Protection</h3>
-                    <p>Qaza, 2+ No Jamat, or 2 missed days can break streaks, unless a lifeline protects you.</p>
-                </article>
-                <article class="card">
-                    <h3>Admin Tools</h3>
-                    <p>Review approvals, inspect history, change checkpoints, and manage streaks and lifelines.</p>
-                </article>
-            </section>
-
-            <section class="card">
-                <h2>Current Participants</h2>
-                <div class="table-wrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Username</th>
-                                <th>Current Streak</th>
-                                <th>Lifelines</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="preview-leaderboard">
-                            <tr><td colspan="5" class="no-data">Loading participants...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-        </section>
-
-        <section id="login-page" class="page">
-            <div class="auth-card card narrow">
-                <h2>Login</h2>
-                <form id="login-form">
-                    <div class="form-group">
-                        <label for="login-identifier">Username or Email</label>
-                        <input type="text" id="login-identifier" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="login-password">Password</label>
-                        <input type="password" id="login-password" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary full-width">Login</button>
-                </form>
-                <p class="form-note">Use your username or registered email to sign in.</p>
+            <div class="form-group">
+              <label for="login-password">Password</label>
+              <input type="password" id="login-password" required>
             </div>
-        </section>
+            <button type="submit" class="btn btn-primary full-width">Login</button>
+          </form>
+        </div>
+      </div>
+    </section>
 
-        <section id="register-page" class="page">
-            <div class="auth-card card narrow">
-                <h2>Register</h2>
-                <form id="register-form">
-                    <div class="form-group">
-                        <label for="register-username">Username</label>
-                        <input type="text" id="register-username" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="register-email">Email</label>
-                        <input type="email" id="register-email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="register-password">Password</label>
-                        <input type="password" id="register-password" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary full-width">Register</button>
-                </form>
-                <p class="form-note">New registrations stay pending until admin approval.</p>
+    <section id="register-page" class="page">
+      <div class="auth-shell">
+        <div class="card auth-card">
+          <h2>Create Account</h2>
+          <p class="muted">New users stay pending until admin approval.</p>
+          <form id="register-form">
+            <div class="form-group">
+              <label for="register-name">Full Name</label>
+              <input type="text" id="register-name" required>
             </div>
-        </section>
-
-        <section id="dashboard-page" class="page">
-            <div class="dashboard-grid">
-                <div class="card">
-                    <h2>My Dashboard</h2>
-                    <div id="user-status-box" class="status-box pending">
-                        <h3 id="status-message">Account Pending Approval</h3>
-                        <p id="status-detail">Your account is awaiting admin approval.</p>
-                    </div>
-                    <div class="stats-grid compact">
-                        <div class="stat-card">
-                            <span class="stat-label">Current Streak</span>
-                            <span id="current-streak" class="stat-value">0</span>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-label">Current Checkpoint</span>
-                            <span id="current-checkpoint" class="stat-value">0</span>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-label">Available Lifelines</span>
-                            <span id="lifeline-count" class="stat-value">0</span>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-label">Lifelines Earned</span>
-                            <span id="lifelines-earned" class="stat-value">0</span>
-                        </div>
-                        <div class="stat-card">
-                            <span class="stat-label">Lifelines Used</span>
-                            <span id="lifelines-used" class="stat-value">0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="submission-card" class="card">
-                    <div class="card-header split">
-                        <div>
-                            <h2>Salah Submission</h2>
-                            <p id="submission-help">You can submit only for today or yesterday.</p>
-                        </div>
-                        <div class="entry-date-box">
-                            <label for="entry-date">Entry Date</label>
-                            <input type="date" id="entry-date">
-                        </div>
-                    </div>
-                    <div id="submission-warning" class="inline-alert hidden"></div>
-                    <form id="salah-form">
-                        <div class="table-wrap">
-                            <table class="data-table prayer-table">
-                                <thead>
-                                    <tr>
-                                        <th>Salah / Namaz</th>
-                                        <th>Takbeer-e-Ula</th>
-                                        <th>Jamat</th>
-                                        <th>No Jamat</th>
-                                        <th>Qaza</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr data-prayer="fajr">
-                                        <td>Fajr</td>
-                                        <td><input type="checkbox" class="takbeer-checkbox" data-prayer="fajr"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="fajr" data-status="jamat"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="fajr" data-status="no-jamat"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="fajr" data-status="qaza"></td>
-                                    </tr>
-                                    <tr data-prayer="zuhr">
-                                        <td>Zuhr</td>
-                                        <td><input type="checkbox" class="takbeer-checkbox" data-prayer="zuhr"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="zuhr" data-status="jamat"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="zuhr" data-status="no-jamat"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="zuhr" data-status="qaza"></td>
-                                    </tr>
-                                    <tr data-prayer="asr">
-                                        <td>Asr</td>
-                                        <td><input type="checkbox" class="takbeer-checkbox" data-prayer="asr"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="asr" data-status="jamat"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="asr" data-status="no-jamat"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="asr" data-status="qaza"></td>
-                                    </tr>
-                                    <tr data-prayer="maghrib">
-                                        <td>Maghrib</td>
-                                        <td><input type="checkbox" class="takbeer-checkbox" data-prayer="maghrib"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="maghrib" data-status="jamat"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="maghrib" data-status="no-jamat"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="maghrib" data-status="qaza"></td>
-                                    </tr>
-                                    <tr data-prayer="isha">
-                                        <td>Isha</td>
-                                        <td><input type="checkbox" class="takbeer-checkbox" data-prayer="isha"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="isha" data-status="jamat"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="isha" data-status="no-jamat"></td>
-                                        <td><input type="checkbox" class="status-checkbox" data-prayer="isha" data-status="qaza"></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="form-note-group">
-                            <p>Rules: Pick exactly one status per prayer. Takbeer-e-Ula is allowed only with Jamat. Duplicate/older submissions are blocked automatically.</p>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Submit Salah Entry</button>
-                    </form>
-                </div>
-
-                <div class="card full-span">
-                    <div class="card-header split">
-                        <h2>My Submission History</h2>
-                        <button type="button" class="btn btn-light" id="refresh-history-btn">Refresh</button>
-                    </div>
-                    <div class="table-wrap">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Entry Date</th>
-                                    <th>Fajr</th>
-                                    <th>Zuhr</th>
-                                    <th>Asr</th>
-                                    <th>Maghrib</th>
-                                    <th>Isha</th>
-                                    <th>Lifeline Used</th>
-                                    <th>Break Reason</th>
-                                    <th>Submitted At</th>
-                                </tr>
-                            </thead>
-                            <tbody id="history-table-body">
-                                <tr><td colspan="9" class="no-data">No entries yet</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="form-group">
+              <label for="register-username">Username</label>
+              <input type="text" id="register-username" required>
             </div>
-        </section>
-
-        <section id="admin-dashboard-page" class="page">
-            <div class="card">
-                <div class="card-header split">
-                    <div>
-                        <h2>Admin Dashboard</h2>
-                        <p>Approve users, inspect full history, and manage streaks, lifelines, and checkpoints.</p>
-                    </div>
-                    <div class="checkpoint-inline">
-                        <label for="checkpoint-input">Checkpoint Milestones</label>
-                        <input type="text" id="checkpoint-input" placeholder="5,10,20,30,40">
-                        <button class="btn btn-light" id="save-checkpoints-btn">Save</button>
-                    </div>
-                </div>
-
-                <div class="stats-grid compact admin-stats" id="admin-top-stats"></div>
-
-                <div class="admin-layout">
-                    <div>
-                        <div class="admin-tabs">
-                            <button class="admin-tab-btn active" data-tab="pending">Pending</button>
-                            <button class="admin-tab-btn" data-tab="users">Users</button>
-                            <button class="admin-tab-btn" data-tab="lifelines">Lifeline History</button>
-                        </div>
-
-                        <div id="tab-pending" class="admin-tab-content active-tab">
-                            <div id="pending-users-list" class="stack-list"></div>
-                        </div>
-
-                        <div id="tab-users" class="admin-tab-content hidden">
-                            <div class="toolbar">
-                                <input type="text" id="admin-user-search" placeholder="Search username or email">
-                                <button class="btn btn-light" id="refresh-users-btn">Refresh</button>
-                            </div>
-                            <div class="table-wrap">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Username</th>
-                                            <th>Email</th>
-                                            <th>Status</th>
-                                            <th>Streak</th>
-                                            <th>Lifelines</th>
-                                            <th>Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="admin-users-table-body">
-                                        <tr><td colspan="6" class="no-data">Loading users...</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <div id="tab-lifelines" class="admin-tab-content hidden">
-                            <div class="table-wrap">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>When</th>
-                                            <th>User</th>
-                                            <th>Event</th>
-                                            <th>Count</th>
-                                            <th>Reason</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="lifeline-history-body">
-                                        <tr><td colspan="5" class="no-data">No lifeline history yet</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <aside class="card admin-detail-card">
-                        <h3>User Details</h3>
-                        <div id="admin-user-detail-empty" class="no-data small">Select a user from the Users tab to inspect and manage their data.</div>
-                        <div id="admin-user-detail" class="hidden">
-                            <div class="detail-top">
-                                <h4 id="detail-username">-</h4>
-                                <p id="detail-email">-</p>
-                            </div>
-                            <div class="stats-grid compact">
-                                <div class="stat-card">
-                                    <span class="stat-label">Current Streak</span>
-                                    <span id="detail-streak" class="stat-value">0</span>
-                                </div>
-                                <div class="stat-card">
-                                    <span class="stat-label">Current Lifelines</span>
-                                    <span id="detail-lifelines" class="stat-value">0</span>
-                                </div>
-                                <div class="stat-card">
-                                    <span class="stat-label">Earned</span>
-                                    <span id="detail-earned" class="stat-value">0</span>
-                                </div>
-                                <div class="stat-card">
-                                    <span class="stat-label">Used</span>
-                                    <span id="detail-used" class="stat-value">0</span>
-                                </div>
-                            </div>
-
-                            <div class="admin-actions-grid">
-                                <div class="form-group">
-                                    <label for="admin-set-streak">Set Custom Streak</label>
-                                    <input type="number" id="admin-set-streak" min="0">
-                                    <button type="button" class="btn btn-light full-width" id="set-streak-btn">Update Streak</button>
-                                </div>
-                                <div class="form-group">
-                                    <label for="admin-lifeline-change">Add / Remove Lifelines</label>
-                                    <input type="number" id="admin-lifeline-change" placeholder="Use + or - value">
-                                    <button type="button" class="btn btn-light full-width" id="apply-lifeline-btn">Apply Lifeline Change</button>
-                                </div>
-                            </div>
-
-                            <h4>Full Salah History</h4>
-                            <div class="table-wrap detail-history-wrap">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Entry Date</th>
-                                            <th>Fajr</th>
-                                            <th>Zuhr</th>
-                                            <th>Asr</th>
-                                            <th>Maghrib</th>
-                                            <th>Isha</th>
-                                            <th>Streak Before</th>
-                                            <th>Streak After</th>
-                                            <th>Break Reason</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="admin-detail-history-body">
-                                        <tr><td colspan="9" class="no-data">No history loaded</td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </aside>
-                </div>
+            <div class="form-group">
+              <label for="register-email">Email</label>
+              <input type="email" id="register-email" required>
             </div>
-        </section>
-
-        <section id="leaderboard-page" class="page">
-            <div class="card">
-                <h2>Leaderboard</h2>
-                <div class="table-wrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Username</th>
-                                <th>Current Streak</th>
-                                <th>Checkpoint</th>
-                                <th>Lifelines</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody id="leaderboard-body">
-                            <tr><td colspan="6" class="no-data">Loading leaderboard...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="form-group">
+              <label for="register-password">Password</label>
+              <input type="password" id="register-password" required>
             </div>
-        </section>
-    </main>
+            <button type="submit" class="btn btn-primary full-width">Register</button>
+          </form>
+        </div>
+      </div>
+    </section>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="app.js"></script>
+    <section id="dashboard-page" class="page">
+      <div class="dashboard-grid">
+        <div class="card status-hero">
+          <div>
+            <h2 id="dashboard-greeting">My Dashboard</h2>
+            <p id="status-detail">Track your daily progress and keep your streak alive.</p>
+          </div>
+          <div class="dashboard-badges">
+            <div class="metric-pill"><span>Streak</span><strong id="current-streak">0</strong></div>
+            <div class="metric-pill"><span>Lifelines</span><strong id="lifeline-count">0</strong></div>
+            <div class="metric-pill"><span>Checkpoint</span><strong id="current-checkpoint">0</strong></div>
+          </div>
+        </div>
+
+        <div class="card full-span">
+          <div class="section-title-row">
+            <h2>40-Day Progress Path</h2>
+            <span class="section-subtle">Snake-style milestone tracker</span>
+          </div>
+          <div id="path-progress" class="path-progress"></div>
+          <div class="path-legend">
+            <span><i class="legend-dot done"></i> Completed</span>
+            <span><i class="legend-dot current"></i> Current Position</span>
+            <span><i class="legend-dot checkpoint"></i> Checkpoint</span>
+            <span><i class="legend-dot pending"></i> Remaining</span>
+          </div>
+        </div>
+
+        <div class="card full-span" id="submission-card">
+          <div class="section-title-row wrap">
+            <div>
+              <h2>Salah Submission</h2>
+              <p class="muted">Only today or yesterday can be submitted, and only once per date.</p>
+            </div>
+            <div class="entry-date-box">
+              <label for="entry-date">Entry Date</label>
+              <input type="date" id="entry-date">
+            </div>
+          </div>
+          <div id="submission-warning" class="inline-alert hidden"></div>
+          <form id="salah-form">
+            <div class="table-wrap">
+              <table class="data-table prayer-table">
+                <thead>
+                  <tr>
+                    <th>Salah / Namaz</th>
+                    <th>Takbeer-e-Ula</th>
+                    <th>Jamat</th>
+                    <th>No Jamat</th>
+                    <th>Qaza</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr data-prayer="fajr"><td>Fajr</td><td><input type="checkbox" class="takbeer-checkbox" data-prayer="fajr"></td><td><input type="checkbox" class="status-checkbox" data-prayer="fajr" data-status="jamat"></td><td><input type="checkbox" class="status-checkbox" data-prayer="fajr" data-status="no-jamat"></td><td><input type="checkbox" class="status-checkbox" data-prayer="fajr" data-status="qaza"></td></tr>
+                  <tr data-prayer="zuhr"><td>Zuhr</td><td><input type="checkbox" class="takbeer-checkbox" data-prayer="zuhr"></td><td><input type="checkbox" class="status-checkbox" data-prayer="zuhr" data-status="jamat"></td><td><input type="checkbox" class="status-checkbox" data-prayer="zuhr" data-status="no-jamat"></td><td><input type="checkbox" class="status-checkbox" data-prayer="zuhr" data-status="qaza"></td></tr>
+                  <tr data-prayer="asr"><td>Asr</td><td><input type="checkbox" class="takbeer-checkbox" data-prayer="asr"></td><td><input type="checkbox" class="status-checkbox" data-prayer="asr" data-status="jamat"></td><td><input type="checkbox" class="status-checkbox" data-prayer="asr" data-status="no-jamat"></td><td><input type="checkbox" class="status-checkbox" data-prayer="asr" data-status="qaza"></td></tr>
+                  <tr data-prayer="maghrib"><td>Maghrib</td><td><input type="checkbox" class="takbeer-checkbox" data-prayer="maghrib"></td><td><input type="checkbox" class="status-checkbox" data-prayer="maghrib" data-status="jamat"></td><td><input type="checkbox" class="status-checkbox" data-prayer="maghrib" data-status="no-jamat"></td><td><input type="checkbox" class="status-checkbox" data-prayer="maghrib" data-status="qaza"></td></tr>
+                  <tr data-prayer="isha"><td>Isha</td><td><input type="checkbox" class="takbeer-checkbox" data-prayer="isha"></td><td><input type="checkbox" class="status-checkbox" data-prayer="isha" data-status="jamat"></td><td><input type="checkbox" class="status-checkbox" data-prayer="isha" data-status="no-jamat"></td><td><input type="checkbox" class="status-checkbox" data-prayer="isha" data-status="qaza"></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="muted small-gap">Tip: selecting Takbeer-e-Ula will automatically count as Jamat + Takbeer-e-Ula.</p>
+            <button type="submit" class="btn btn-primary">Submit Salah Entry</button>
+          </form>
+        </div>
+
+        <div class="card full-span">
+          <div class="section-title-row wrap">
+            <h2>My Submission History</h2>
+            <button type="button" class="btn btn-light" id="refresh-history-btn">Refresh</button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Entry Date</th>
+                  <th>Fajr</th>
+                  <th>Zuhr</th>
+                  <th>Asr</th>
+                  <th>Maghrib</th>
+                  <th>Isha</th>
+                  <th>Lifeline Used</th>
+                  <th>Break Reason</th>
+                  <th>Submitted At</th>
+                </tr>
+              </thead>
+              <tbody id="history-table-body">
+                <tr><td colspan="9" class="no-data">No entries yet</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="admin-dashboard-page" class="page">
+      <div class="card">
+        <div class="section-title-row wrap">
+          <div>
+            <h2>Admin Dashboard</h2>
+            <p class="muted">Review approvals, inspect user history, and manage streaks/lifelines.</p>
+          </div>
+          <div class="checkpoint-inline">
+            <label for="checkpoint-input">Checkpoints</label>
+            <input type="text" id="checkpoint-input" placeholder="5,10,20,30,40">
+            <button class="btn btn-light" id="save-checkpoints-btn">Save</button>
+          </div>
+        </div>
+
+        <div class="admin-tabs">
+          <button class="admin-tab-btn active" data-tab="pending">Pending</button>
+          <button class="admin-tab-btn" data-tab="users">Users</button>
+        </div>
+
+        <div id="tab-pending" class="admin-tab-content active-tab">
+          <div id="pending-users-list" class="stack-list"></div>
+        </div>
+
+        <div id="tab-users" class="admin-tab-content hidden">
+          <div class="toolbar">
+            <input type="text" id="admin-user-search" placeholder="Search name, username or email">
+            <button class="btn btn-light" id="refresh-users-btn">Refresh</button>
+          </div>
+          <div class="admin-layout">
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Streak</th>
+                    <th>Lifelines</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-users-table-body">
+                  <tr><td colspan="6" class="no-data">Loading users...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <aside class="card admin-detail-card">
+              <div id="admin-user-detail-empty" class="no-data small">Select a user to view details.</div>
+              <div id="admin-user-detail" class="hidden">
+                <h3 id="detail-name">-</h3>
+                <p id="detail-email" class="muted">-</p>
+                <div class="stats-mini">
+                  <div class="mini-stat"><span>Streak</span><strong id="detail-streak">0</strong></div>
+                  <div class="mini-stat"><span>Lifelines</span><strong id="detail-lifelines">0</strong></div>
+                  <div class="mini-stat"><span>Earned</span><strong id="detail-earned">0</strong></div>
+                  <div class="mini-stat"><span>Used</span><strong id="detail-used">0</strong></div>
+                </div>
+                <div class="admin-actions-grid">
+                  <div class="form-group">
+                    <label for="admin-set-streak">Set Streak</label>
+                    <input type="number" id="admin-set-streak" min="0">
+                    <button class="btn btn-light full-width" id="set-streak-btn">Update Streak</button>
+                  </div>
+                  <div class="form-group">
+                    <label for="admin-lifeline-change">Add / Remove Lifelines</label>
+                    <input type="number" id="admin-lifeline-change" placeholder="+1 or -1">
+                    <button class="btn btn-light full-width" id="apply-lifeline-btn">Apply Lifeline Change</button>
+                  </div>
+                </div>
+                <button class="btn btn-danger full-width" id="delete-user-btn">Delete User Data</button>
+                <p class="muted tiny-gap">This removes website data and profile for this user. Auth user may still remain in Supabase Authentication.</p>
+                <div class="table-wrap detail-history-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Fajr</th>
+                        <th>Zuhr</th>
+                        <th>Asr</th>
+                        <th>Maghrib</th>
+                        <th>Isha</th>
+                        <th>Before</th>
+                        <th>After</th>
+                        <th>Break</th>
+                      </tr>
+                    </thead>
+                    <tbody id="admin-detail-history-body">
+                      <tr><td colspan="9" class="no-data">No history loaded</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="leaderboard-page" class="page">
+      <div class="card compact-card">
+        <div class="section-title-row">
+          <h2>Leaderboard</h2>
+          <span class="section-subtle">Only rank, name, and streak</span>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table leaderboard-simple">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Name</th>
+                <th>Streak</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-body">
+              <tr><td colspan="3" class="no-data">Loading leaderboard...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
