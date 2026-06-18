@@ -1,1 +1,85 @@
-hi
+// Hotfix bootstrap for index/app sync issues
+// Load this BEFORE app.js
+(function () {
+  function ensureNode(id, html) {
+    if (!document.getElementById(id)) {
+      document.body.insertAdjacentHTML('afterbegin', html);
+    }
+  }
+
+  function ensureShell() {
+    ensureNode('global-loader', `
+      <div id="global-loader" class="global-loader hidden">
+        <div class="loader-card">
+          <div class="spinner"></div>
+          <p id="loader-text">Loading...</p>
+        </div>
+      </div>
+    `);
+
+    ensureNode('popup-modal', `
+      <div id="popup-modal" class="popup-backdrop hidden">
+        <div class="popup-card">
+          <div class="popup-emoji" id="popup-emoji">✨</div>
+          <h3 id="popup-title">Done</h3>
+          <p id="popup-message">Action completed.</p>
+          <div class="popup-actions" id="popup-actions">
+            <button class="btn btn-primary" id="popup-ok-btn">OK</button>
+          </div>
+        </div>
+      </div>
+    `);
+
+    if (!document.getElementById('about-modal')) {
+      document.body.insertAdjacentHTML('beforeend', `
+        <div id="about-modal" class="about-backdrop hidden">
+          <div class="about-card">
+            <div class="section-title-row wrap about-head">
+              <div>
+                <h2>About the Challenge</h2>
+                <p class="muted">Rules, point system, lifelines, checkpoints, and submission flow</p>
+              </div>
+              <button class="btn btn-light" id="close-about-btn">Close</button>
+            </div>
+            <div class="about-content">
+              <div class="about-section">
+                <h3>Challenge Goal</h3>
+                <ul>
+                  <li>Build a consistent Salah routine for 40 days.</li>
+                  <li>Track daily Salah with one valid submission per date.</li>
+                  <li>Protect your streak using lifelines earned through good performance.</li>
+                </ul>
+              </div>
+              <div class="about-section two-col">
+                <div>
+                  <h3>Login & Registration</h3>
+                  <ul>
+                    <li><strong>Login:</strong> Username or Email + Password</li>
+                    <li><strong>Register:</strong> Full Name + Email + Password</li>
+                    <li>Username is auto-derived from the email address.</li>
+                    <li>New accounts stay pending until admin approval.</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3>Submission Rules</h3>
+                  <ul>
+                    <li>Only <strong>today</strong> or <strong>yesterday</strong> can be submitted.</li>
+                    <li>Only <strong>one submission per entry date</strong> is allowed.</li>
+                    <li>Each prayer needs exactly one status: Jamat, No Jamat, or Qaza.</li>
+                    <li>Takbeer-e-Ula automatically counts as <strong>Jamat + Takbeer-e-Ula</strong>.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureShell, { once: true });
+  } else {
+    ensureShell();
+  }
+})();
