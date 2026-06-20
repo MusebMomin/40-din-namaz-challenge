@@ -298,7 +298,7 @@ body {
 
 .path-progress {
   display: grid;
-  grid-template-columns: repeat(10, minmax(86px, 1fr));
+  grid-template-columns: repeat(5, minmax(98px, 1fr));
   gap: 8px;
   margin-top: 6px;
 }
@@ -309,7 +309,7 @@ body {
 .path-node {
   background: #fff;
   border: 3px solid rgba(148,163,184,.25);
-  min-height: 58px;
+  min-height: 56px;
   border-radius: 18px;
   display: flex;
   flex-direction: column;
@@ -323,12 +323,12 @@ body {
 }
 
 .path-node .day {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--muted);
 }
 
 .path-node .icon {
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1;
 }
 
@@ -845,7 +845,7 @@ body {
   }
 
   .path-progress {
-    grid-template-columns: repeat(5, minmax(58px, 1fr));
+    grid-template-columns: repeat(5, minmax(60px, 1fr));
     gap: 7px;
   }
 
@@ -889,3 +889,5 @@ body {
     font-size: 1.95rem;
   }
 }
+
+.btn-small { padding: 7px 10px; font-size: 12px; border-radius: 10px; }
