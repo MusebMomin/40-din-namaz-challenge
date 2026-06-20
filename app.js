@@ -1515,12 +1515,11 @@ async function adminDeleteEntry(entryId) {
     danger: true,
     confirmText: 'Delete'
   });
-
   if (!ok) return;
 
   const rowRes = await supabaseClient
     .from('salah_entries')
-    .select('id, user_id')
+    .select('id, user_id, entry_date')
     .eq('id', entryId)
     .single();
 
@@ -1574,6 +1573,10 @@ async function rebuildUserProgressFromHistory(userId) {
 
   const rows = historyRes.data || [];
 
+  // Important fix:
+  // Rebuild ONLY from remaining submission sequence.
+  // Do not force gap-based streak reset after deleting an old entry,
+  // otherwise deleting one past row can incorrectly collapse streak to 0.
   let progress = normalizeProgress({
     streak: 0,
     current_lifelines: 0,
@@ -1585,23 +1588,7 @@ async function rebuildUserProgressFromHistory(userId) {
     missed_days_count: 0
   });
 
-  let previousDate = null;
-
   for (const row of rows) {
-    const currentDate = startOfDay(row.entry_date);
-
-    if (previousDate) {
-      const gapDays = Math.floor((currentDate - previousDate) / DAY_MS) - 1;
-      if (gapDays >= 2) {
-        if (progress.current_lifelines > 0) {
-          progress.current_lifelines -= 1;
-          progress.lifelines_used += 1;
-        } else {
-          progress.streak = progress.current_checkpoint;
-        }
-      }
-    }
-
     const payload = {
       fajr: { status: row.fajr_status || row.fajr, takbeer: !!row.fajr_takbeer },
       zuhr: { status: row.zuhr_status || row.zuhr, takbeer: !!row.zuhr_takbeer },
@@ -1623,26 +1610,30 @@ async function rebuildUserProgressFromHistory(userId) {
       last_submission_date: row.entry_date,
       missed_days_count: 0
     });
-
-    previousDate = currentDate;
   }
+
+  const updatePayload = {
+    streak: progress.streak,
+    current_checkpoint: progress.current_checkpoint,
+    current_lifelines: progress.current_lifelines,
+    lifelines_earned: progress.lifelines_earned,
+    lifelines_used: progress.lifelines_used,
+    milestone_rewards: progress.milestone_rewards,
+    last_submission_date: progress.last_submission_date,
+    missed_days_count: 0,
+    updated_at: new Date().toISOString()
+  };
 
   const updateRes = await supabaseClient
     .from('challenge_progress')
-    .update({
-      streak: progress.streak,
-      current_checkpoint: progress.current_checkpoint,
-      current_lifelines: progress.current_lifelines,
-      lifelines_earned: progress.lifelines_earned,
-      lifelines_used: progress.lifelines_used,
-      milestone_rewards: progress.milestone_rewards,
-      last_submission_date: progress.last_submission_date,
-      missed_days_count: progress.missed_days_count,
-      updated_at: new Date().toISOString()
-    })
-    .eq('user_id', userId);
+    .update(updatePayload)
+    .eq('user_id', userId)
+    .select()
+    .single();
 
   if (updateRes.error) throw updateRes.error;
+
+  return updateRes.data;
 }
 
 async function saveCheckpoints() {
