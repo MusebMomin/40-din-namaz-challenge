@@ -1325,12 +1325,18 @@ async function loadAdminUserDetails(userId) {
         <td>${row.streak_before_submission ?? '-'}</td>
         <td>${row.streak_after_submission ?? '-'}</td>
         <td>${escapeHtml(row.break_reason || '-')}</td>
+        <td><button class="btn btn-danger btn-small delete-entry-btn" data-entry-id="${row.id}">Delete</button></td>
       </tr>
     `).join('')
-    : '<tr><td colspan="9" class="no-data">No history for this user</td></tr>';
+    : '<tr><td colspan="10" class="no-data">No history for this user</td></tr>';
 
   document.getElementById('admin-user-detail-empty').classList.add('hidden');
   document.getElementById('admin-user-detail').classList.remove('hidden');
+  document.querySelectorAll('.delete-entry-btn').forEach((btn) => {
+    btn.addEventListener('click', async () =>
+      withLoader('Deleting selected entry...', () => adminDeleteEntry(btn.dataset.entryId))
+    );
+  });
 }
 
 async function adminApproveUser(userId) {
@@ -1496,6 +1502,147 @@ async function adminDeleteUserData(userId, fromDetails = false) {
     message: 'Website profile, progress, entries, and lifeline history were removed.',
     emoji: '🗑️'
   });
+}
+
+async function adminDeleteEntry(entryId) {
+  if (!entryId) return;
+
+  const ok = await showPopup({
+    title: 'Delete Salah entry?',
+    message: 'This removes the selected Salah entry. The user can submit that date again after deletion.',
+    emoji: '🗑️',
+    confirm: true,
+    danger: true,
+    confirmText: 'Delete'
+  });
+
+  if (!ok) return;
+
+  const rowRes = await supabaseClient
+    .from('salah_entries')
+    .select('id, user_id')
+    .eq('id', entryId)
+    .single();
+
+  if (rowRes.error) {
+    await showPopup({
+      title: 'Delete failed',
+      message: rowRes.error.message || 'Unable to load selected entry.',
+      emoji: '❌',
+      danger: true
+    });
+    return;
+  }
+
+  const userId = rowRes.data.user_id;
+
+  const delRes = await supabaseClient
+    .from('salah_entries')
+    .delete()
+    .eq('id', entryId);
+
+  if (delRes.error) {
+    await showPopup({
+      title: 'Delete failed',
+      message: delRes.error.message || 'Unable to delete selected entry.',
+      emoji: '❌',
+      danger: true
+    });
+    return;
+  }
+
+  await rebuildUserProgressFromHistory(userId);
+  await loadAdminUsers();
+  await loadAdminUserDetails(userId);
+  await updateLeaderboard();
+
+  await showPopup({
+    title: 'Entry deleted',
+    message: 'The Salah entry was deleted successfully. The user can now resubmit that date.',
+    emoji: '🗑️'
+  });
+}
+
+async function rebuildUserProgressFromHistory(userId) {
+  const historyRes = await supabaseClient
+    .from('salah_entries')
+    .select('*')
+    .eq('user_id', userId)
+    .order('entry_date', { ascending: true });
+
+  if (historyRes.error) throw historyRes.error;
+
+  const rows = historyRes.data || [];
+
+  let progress = normalizeProgress({
+    streak: 0,
+    current_lifelines: 0,
+    lifelines_earned: 0,
+    lifelines_used: 0,
+    current_checkpoint: 0,
+    milestone_rewards: [],
+    last_submission_date: null,
+    missed_days_count: 0
+  });
+
+  let previousDate = null;
+
+  for (const row of rows) {
+    const currentDate = startOfDay(row.entry_date);
+
+    if (previousDate) {
+      const gapDays = Math.floor((currentDate - previousDate) / DAY_MS) - 1;
+      if (gapDays >= 2) {
+        if (progress.current_lifelines > 0) {
+          progress.current_lifelines -= 1;
+          progress.lifelines_used += 1;
+        } else {
+          progress.streak = progress.current_checkpoint;
+        }
+      }
+    }
+
+    const payload = {
+      fajr: { status: row.fajr_status || row.fajr, takbeer: !!row.fajr_takbeer },
+      zuhr: { status: row.zuhr_status || row.zuhr, takbeer: !!row.zuhr_takbeer },
+      asr: { status: row.asr_status || row.asr, takbeer: !!row.asr_takbeer },
+      maghrib: { status: row.maghrib_status || row.maghrib, takbeer: !!row.maghrib_takbeer },
+      isha: { status: row.isha_status || row.isha, takbeer: !!row.isha_takbeer }
+    };
+
+    const evaluation = evaluateSubmissionOutcome(payload, progress);
+
+    progress = normalizeProgress({
+      ...progress,
+      streak: evaluation.streak,
+      current_checkpoint: evaluation.checkpoint,
+      current_lifelines: evaluation.currentLifelines,
+      lifelines_earned: evaluation.lifelinesEarned,
+      lifelines_used: evaluation.lifelinesUsed,
+      milestone_rewards: evaluation.milestoneRewards,
+      last_submission_date: row.entry_date,
+      missed_days_count: 0
+    });
+
+    previousDate = currentDate;
+  }
+
+  const updateRes = await supabaseClient
+    .from('challenge_progress')
+    .update({
+      streak: progress.streak,
+      current_checkpoint: progress.current_checkpoint,
+      current_lifelines: progress.current_lifelines,
+      lifelines_earned: progress.lifelines_earned,
+      lifelines_used: progress.lifelines_used,
+      milestone_rewards: progress.milestone_rewards,
+      last_submission_date: progress.last_submission_date,
+      missed_days_count: progress.missed_days_count,
+      updated_at: new Date().toISOString()
+    })
+    .eq('user_id', userId);
+
+  if (updateRes.error) throw updateRes.error;
 }
 
 async function saveCheckpoints() {
