@@ -26,13 +26,9 @@ const appState = {
   popupResolve: null
 };
 
-// Simple in-memory cache for leaderboard (60-second TTL)
-const leaderboardCache = { data: null, ts: 0, TTL: 60_000 };
-
 window.addEventListener('DOMContentLoaded', async () => {
   setupPopup();
   setupEventListeners();
-  setupHamburger();
   bindAuthListener();
   await withLoader('Loading your challenge...', restoreSession);
 });
@@ -56,15 +52,28 @@ function setupEventListeners() {
     })
   );
 
-  addClick('nav-leaderboard', async () => {
-    displayPage('leaderboard-page');
-    await updateLeaderboard();
-  });
+  addClick('nav-leaderboard', async () =>
+    withLoader('Loading leaderboard...', async () => {
+      await updateLeaderboard();
+      displayPage('leaderboard-page');
+    })
+  );
 
   addClick('nav-logout', logout);
 
-  addClick('hero-login-btn', () => displayPage('login-page'));
-  addClick('hero-register-btn', () => displayPage('register-page'));
+  addClick('hero-login-btn', async () => {
+    showLoader('Opening login...');
+    await delay(220);
+    hideLoader();
+    displayPage('login-page');
+  });
+
+  addClick('hero-register-btn', async () => {
+    showLoader('Opening registration...');
+    await delay(220);
+    hideLoader();
+    displayPage('register-page');
+  });
 
   addClick('about-challenge-btn', () => {
     document.getElementById('about-modal').classList.remove('hidden');
@@ -142,38 +151,8 @@ function setupEventListeners() {
 
   const search = document.getElementById('admin-user-search');
   if (search) {
-    let searchTimer;
-    search.addEventListener('input', () => {
-      clearTimeout(searchTimer);
-      searchTimer = setTimeout(renderAdminUsersTable, 180);
-    });
+    search.addEventListener('input', renderAdminUsersTable);
   }
-}
-
-function setupHamburger() {
-  const btn = document.getElementById('hamburger-btn');
-  const menu = document.getElementById('nav-menu');
-  if (!btn || !menu) return;
-
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const open = menu.classList.toggle('open');
-    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
-
-  // Close menu when a nav link is clicked
-  menu.querySelectorAll('a').forEach((a) => {
-    a.addEventListener('click', () => {
-      menu.classList.remove('open');
-      btn.setAttribute('aria-expanded', 'false');
-    });
-  });
-
-  // Close on outside click
-  document.addEventListener('click', () => {
-    menu.classList.remove('open');
-    btn.setAttribute('aria-expanded', 'false');
-  });
 }
 
 function addClick(id, handler) {
@@ -601,7 +580,6 @@ async function updateDashboard() {
 
   prepareEntryDateInput();
   renderProgressPath(progress.streak);
-  renderMobilePrayerCards();
   await loadMyHistory();
 }
 
@@ -674,87 +652,6 @@ function prepareEntryDateInput() {
   entryInput.max = formatDate(today);
   if (!entryInput.value) entryInput.value = formatDate(today);
 }
-
-// Renders tap-friendly prayer cards for mobile screens.
-// On desktop these are hidden via CSS; the regular table is shown instead.
-function renderMobilePrayerCards() {
-  const prayerNames = { fajr: 'Fajr', zuhr: 'Zuhr', asr: 'Asr', maghrib: 'Maghrib', isha: 'Isha' };
-  const statuses = ['jamat', 'no-jamat', 'qaza'];
-  const statusLabels = { jamat: 'Jamat', 'no-jamat': 'No Jamat', qaza: 'Qaza' };
-
-  let container = document.querySelector('.prayer-cards');
-  if (!container) {
-    const wrap = document.querySelector('.prayer-table-wrap');
-    if (!wrap) return;
-    container = document.createElement('div');
-    container.className = 'prayer-cards';
-    wrap.appendChild(container);
-  }
-
-  container.innerHTML = PRAYERS.map((prayer) => `
-    <div class="prayer-card" data-prayer="${prayer}">
-      <div class="prayer-card-name">${prayerNames[prayer]}</div>
-      ${statuses.map((s) => `
-        <label class="prayer-option" data-prayer="${prayer}" data-status="${s}">
-          <input type="checkbox" class="status-checkbox" data-prayer="${prayer}" data-status="${s}" tabindex="-1">
-          ${statusLabels[s]}
-        </label>
-      `).join('')}
-      <label class="prayer-option takbeer-option" data-prayer="${prayer}">
-        <input type="checkbox" class="takbeer-checkbox" data-prayer="${prayer}" tabindex="-1">
-        Takbeer-e-Ula
-      </label>
-    </div>
-  `).join('');
-
-  // Sync visual selected state and keep card checkboxes in sync with table checkboxes
-  container.querySelectorAll('.status-checkbox').forEach((cb) => {
-    cb.addEventListener('change', (e) => {
-      handleStatusCheckboxChange(e);
-      syncCardOptionStyles(e.target.closest('.prayer-card'));
-      mirrorCardToTable(e.target.closest('[data-prayer]').dataset.prayer);
-    });
-  });
-
-  container.querySelectorAll('.takbeer-checkbox').forEach((cb) => {
-    cb.addEventListener('change', (e) => {
-      handleTakbeerCheckboxChange(e);
-      syncCardOptionStyles(e.target.closest('.prayer-card'));
-      mirrorCardToTable(e.target.closest('[data-prayer]').dataset.prayer);
-    });
-  });
-
-  container.querySelectorAll('.prayer-option').forEach((label) => {
-    label.addEventListener('click', (e) => {
-      if (e.target.tagName === 'INPUT') return; // handled by change event
-      const cb = label.querySelector('input[type="checkbox"]');
-      if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true })); }
-    });
-  });
-}
-
-function syncCardOptionStyles(card) {
-  if (!card) return;
-  card.querySelectorAll('.prayer-option').forEach((opt) => {
-    const cb = opt.querySelector('input[type="checkbox"]');
-    opt.classList.toggle('selected', cb ? cb.checked : false);
-  });
-}
-
-function mirrorCardToTable(prayer) {
-  const card = document.querySelector(`.prayer-card[data-prayer="${prayer}"]`);
-  if (!card) return;
-  ['jamat', 'no-jamat', 'qaza'].forEach((s) => {
-    const cardCb = card.querySelector(`.status-checkbox[data-status="${s}"]`);
-    const tableCb = document.querySelector(`.data-table .status-checkbox[data-prayer="${prayer}"][data-status="${s}"]`);
-    if (cardCb && tableCb) tableCb.checked = cardCb.checked;
-  });
-  const cardTakbeer = card.querySelector(`.takbeer-checkbox`);
-  const tableTakbeer = document.querySelector(`.data-table .takbeer-checkbox[data-prayer="${prayer}"]`);
-  if (cardTakbeer && tableTakbeer) tableTakbeer.checked = cardTakbeer.checked;
-}
-
-
 
 function formatDate(date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
@@ -962,7 +859,6 @@ async function handleSalahSubmit(e) {
   resetPrayerTable();
   renderProgressPath(appState.currentProgress.streak);
   await loadMyHistory();
-  leaderboardCache.ts = 0; // invalidate cache after own submission
   await updateLeaderboard();
 
   const messages = ['Your Salah entry has been submitted successfully.'];
@@ -1116,8 +1012,6 @@ function resetPrayerTable() {
   document.querySelectorAll('.status-checkbox,.takbeer-checkbox').forEach((cb) => {
     cb.checked = false;
   });
-  // Also reset mobile card visual state
-  document.querySelectorAll('.prayer-option').forEach((opt) => opt.classList.remove('selected'));
 }
 
 async function loadMyHistory() {
@@ -1177,16 +1071,7 @@ function initials(name) {
     .join('');
 }
 
-async function updateLeaderboard(force = false) {
-  const now = Date.now();
-  if (!force && leaderboardCache.data && now - leaderboardCache.ts < leaderboardCache.TTL) {
-    const rows = leaderboardCache.data;
-    renderLeaderboardSimple(document.getElementById('preview-leaderboard'), rows.slice(0, 5));
-    renderLeaderboardSimple(document.getElementById('leaderboard-body'), rows);
-    renderRaceTrack(rows);
-    return;
-  }
-
+async function updateLeaderboard() {
   const [profilesRes, progressRes] = await Promise.all([
     supabaseClient
       .from('profiles')
@@ -1212,9 +1097,6 @@ async function updateLeaderboard(force = false) {
       streak: streakMap.get(p.id) || 0
     }))
     .sort((a, b) => b.streak - a.streak || a.full_name.localeCompare(b.full_name));
-
-  leaderboardCache.data = rows;
-  leaderboardCache.ts = Date.now();
 
   renderLeaderboardSimple(document.getElementById('preview-leaderboard'), rows.slice(0, 5));
   renderLeaderboardSimple(document.getElementById('leaderboard-body'), rows);
@@ -1467,7 +1349,6 @@ async function adminApproveUser(userId) {
 
   if (res.error) throw res.error;
 
-  leaderboardCache.ts = 0;
   await Promise.all([loadPendingApprovals(), loadAdminUsers(), updateLeaderboard()]);
 
   await showPopup({
