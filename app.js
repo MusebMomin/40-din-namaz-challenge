@@ -1101,8 +1101,7 @@ async function updateLeaderboard(force = false) {
   const now = Date.now();
   if (!force && leaderboardCache.data && now - leaderboardCache.ts < leaderboardCache.TTL) {
     const rows = leaderboardCache.data;
-    renderLeaderboardSimple(document.getElementById('preview-leaderboard'), rows.slice(0, 5));
-    renderLeaderboardSimple(document.getElementById('leaderboard-body'), rows);
+    renderLeaderboard(rows);
     renderRaceTrack(rows);
     return;
   }
@@ -1136,34 +1135,83 @@ async function updateLeaderboard(force = false) {
   leaderboardCache.data = rows;
   leaderboardCache.ts = Date.now();
 
-  renderLeaderboardSimple(document.getElementById('preview-leaderboard'), rows.slice(0, 5));
-  renderLeaderboardSimple(document.getElementById('leaderboard-body'), rows);
+  renderLeaderboard(rows);
   renderRaceTrack(rows);
 }
 
-function renderLeaderboardSimple(target, rows) {
-  if (!target) return;
+function renderLeaderboard(rows) {
+  renderPodium(rows.slice(0, 3));
+  renderList(rows.slice(3));
+}
 
-  if (!rows.length) {
-    target.innerHTML = '<tr><td colspan="3" class="no-data">No approved participants yet</td></tr>';
+function renderPodium(top) {
+  const host = document.getElementById('lb-podium');
+  if (!host) return;
+
+  if (!top.length) {
+    host.innerHTML = '<p class="no-data" style="width:100%">No participants yet.</p>';
     return;
   }
 
-  target.innerHTML = rows.map((row, idx) => `
-    <tr>
-      <td>#${idx + 1}</td>
-      <td>${escapeHtml(row.full_name)}</td>
-      <td>${row.streak}</td>
-    </tr>
-  `).join('');
+  // Display order: 2nd, 1st, 3rd so #1 is visually tallest in center
+  const display = [top[1], top[0], top[2]].filter(Boolean);
+  const rankOf = (slot) => slot === top[0] ? 1 : slot === top[1] ? 2 : 3;
+  const medals  = ['🥇', '🥈', '🥉'];
+  const crowns  = { 1: '👑', 2: '', 3: '' };
+
+  host.innerHTML = display.map((p) => {
+    const rank    = rankOf(p);
+    const color   = colorFromString(p.full_name);
+    const crown   = crowns[rank] ? `<span class="lb-podium-crown">${crowns[rank]}</span>` : '';
+    return `
+      <div class="lb-podium-slot" data-rank="${rank}">
+        <div class="lb-podium-avatar" style="background:${color}">
+          ${crown}
+          ${initials(p.full_name)}
+        </div>
+        <div class="lb-podium-name">${escapeHtml(p.full_name)}</div>
+        <div class="lb-podium-streak"><strong>${p.streak}</strong> days</div>
+        <div class="lb-podium-base">${medals[rank - 1]}</div>
+      </div>
+    `;
+  }).join('');
 }
+
+function renderList(rows) {
+  const host = document.getElementById('lb-list');
+  if (!host) return;
+
+  if (!rows.length) { host.innerHTML = ''; return; }
+
+  const maxStreak = Math.max(...rows.map((r) => r.streak), 1);
+
+  host.innerHTML = rows.map((row, idx) => {
+    const rank  = idx + 4;
+    const color = colorFromString(row.full_name);
+    const pct   = Math.max(4, Math.round((row.streak / maxStreak) * 100));
+    const delay = Math.min(idx * 0.05, 0.5);
+    return `
+      <div class="lb-row" style="animation-delay:${delay}s">
+        <div class="lb-rank">#${rank}</div>
+        <div class="lb-avatar" style="background:${color}">${initials(row.full_name)}</div>
+        <div class="lb-name">${escapeHtml(row.full_name)}</div>
+        <div class="lb-streak-bar-wrap">
+          <div class="lb-bar-bg"><div class="lb-bar-fill" style="width:${pct}%;animation-delay:${delay + 0.2}s"></div></div>
+          <div class="lb-streak-num">${row.streak}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Keep old name as alias so cache path still works
+function renderLeaderboardSimple(target, rows) { /* no-op: replaced by renderLeaderboard */ }
 
 function renderRaceTrack(rows) {
   const host = document.getElementById('leaderboard-race-track');
   if (!host) return;
 
   host.innerHTML = '';
-  host.classList.add('enhanced-race');
 
   const groups = new Map();
   rows.forEach((row) => {
@@ -1176,30 +1224,35 @@ function renderRaceTrack(rows) {
     const cell = document.createElement('div');
     cell.className = 'race-cell';
 
-    const bubbles = (groups.get(day) || []).map((player) => `
-      <span class="race-bubble" style="background:${colorFromString(player.full_name)}" title="${escapeHtml(player.full_name)} • Day ${day}">
+    const players = groups.get(day) || [];
+    const bubbles = players.map((player, i) => {
+      const delay = (i * 0.06).toFixed(2);
+      return `<span class="race-bubble" style="background:${colorFromString(player.full_name)};animation-delay:${delay}s">
         ${initials(player.full_name)}
         <span class="race-tooltip">${escapeHtml(player.full_name)}<br>Day ${day}</span>
-      </span>
-    `).join('');
+      </span>`;
+    }).join('');
 
-    cell.innerHTML = `<div class="race-day">Day ${day}</div><div class="race-bubbles">${bubbles}</div>`;
+    cell.innerHTML = `<div class="race-day">D${day}</div><div class="race-bubbles">${bubbles}</div>`;
     host.appendChild(cell);
   }
 
-  host.querySelectorAll('.race-bubble').forEach((bubble) => {
-    bubble.addEventListener('click', (e) => {
-      e.stopPropagation();
-      host.querySelectorAll('.race-bubble.active').forEach((b) => {
-        if (b !== bubble) b.classList.remove('active');
-      });
-      bubble.classList.toggle('active');
-    });
+  // single delegated listener — no duplicate registrations
+  host.addEventListener('click', (e) => {
+    const bubble = e.target.closest('.race-bubble');
+    if (!bubble) return;
+    e.stopPropagation();
+    const isActive = bubble.classList.contains('active');
+    host.querySelectorAll('.race-bubble.active').forEach((b) => b.classList.remove('active'));
+    if (!isActive) bubble.classList.add('active');
   });
 
-  document.addEventListener('click', () => {
-    host.querySelectorAll('.race-bubble.active').forEach((b) => b.classList.remove('active'));
-  });
+  if (!host._outsideListenerAdded) {
+    document.addEventListener('click', () =>
+      host.querySelectorAll('.race-bubble.active').forEach((b) => b.classList.remove('active'))
+    );
+    host._outsideListenerAdded = true;
+  }
 }
 
 async function loadAdminDashboard() {
