@@ -668,9 +668,16 @@ function renderProgressPath(currentStreak) {
 
 function prepareEntryDateInput() {
   const entryInput = document.getElementById('entry-date');
+  const now = new Date();
   const today = new Date();
+  const yesterday = new Date(today.getTime() - DAY_MS);
+
   entryInput.max = formatDate(today);
-  if (!entryInput.value) entryInput.value = formatDate(today);
+
+  if (!entryInput.value) {
+    // Default to yesterday before Isha, today after Isha
+    entryInput.value = now.getHours() < ISHA_HOUR ? formatDate(yesterday) : formatDate(today);
+  }
 }
 
 // Renders tap-friendly prayer cards for mobile screens.
@@ -692,14 +699,27 @@ function startOfDay(dateOrStr) {
   return d;
 }
 
+const ISHA_HOUR = 20; // 8 PM — earliest time today's entry can be submitted
+
 function validateEntryDateWindow(value) {
   if (!value) return { ok: false, message: 'Please choose an entry date.' };
 
+  const now = new Date();
   const today = startOfDay(new Date());
   const yesterday = new Date(today.getTime() - DAY_MS);
   const entry = startOfDay(value);
 
-  if (entry.getTime() === today.getTime() || entry.getTime() === yesterday.getTime()) {
+  if (entry.getTime() === today.getTime()) {
+    if (now.getHours() < ISHA_HOUR) {
+      return {
+        ok: false,
+        message: `Today's entry can only be submitted after ${ISHA_HOUR % 12 || 12}:00 PM (Isha time). You can still submit yesterday's entry now.`
+      };
+    }
+    return { ok: true };
+  }
+
+  if (entry.getTime() === yesterday.getTime()) {
     return { ok: true };
   }
 
