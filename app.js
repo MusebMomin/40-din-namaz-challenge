@@ -26,9 +26,13 @@ const appState = {
   popupResolve: null
 };
 
+// Simple in-memory cache for leaderboard (60-second TTL)
+const leaderboardCache = { data: null, ts: 0, TTL: 60_000 };
+
 window.addEventListener('DOMContentLoaded', async () => {
   setupPopup();
   setupEventListeners();
+  setupHamburger();
   bindAuthListener();
   await withLoader('Loading your challenge...', restoreSession);
 });
@@ -52,28 +56,15 @@ function setupEventListeners() {
     })
   );
 
-  addClick('nav-leaderboard', async () =>
-    withLoader('Loading leaderboard...', async () => {
-      await updateLeaderboard();
-      displayPage('leaderboard-page');
-    })
-  );
+  addClick('nav-leaderboard', async () => {
+    displayPage('leaderboard-page');
+    await updateLeaderboard();
+  });
 
   addClick('nav-logout', logout);
 
-  addClick('hero-login-btn', async () => {
-    showLoader('Opening login...');
-    await delay(220);
-    hideLoader();
-    displayPage('login-page');
-  });
-
-  addClick('hero-register-btn', async () => {
-    showLoader('Opening registration...');
-    await delay(220);
-    hideLoader();
-    displayPage('register-page');
-  });
+  addClick('hero-login-btn', () => displayPage('login-page'));
+  addClick('hero-register-btn', () => displayPage('register-page'));
 
   addClick('about-challenge-btn', () => {
     document.getElementById('about-modal').classList.remove('hidden');
@@ -151,8 +142,38 @@ function setupEventListeners() {
 
   const search = document.getElementById('admin-user-search');
   if (search) {
-    search.addEventListener('input', renderAdminUsersTable);
+    let searchTimer;
+    search.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(renderAdminUsersTable, 180);
+    });
   }
+}
+
+function setupHamburger() {
+  const btn = document.getElementById('hamburger-btn');
+  const menu = document.getElementById('nav-menu');
+  if (!btn || !menu) return;
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const open = menu.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  // Close menu when a nav link is clicked
+  menu.querySelectorAll('a').forEach((a) => {
+    a.addEventListener('click', () => {
+      menu.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  // Close on outside click
+  document.addEventListener('click', () => {
+    menu.classList.remove('open');
+    btn.setAttribute('aria-expanded', 'false');
+  });
 }
 
 function addClick(id, handler) {
@@ -257,7 +278,7 @@ function bindAuthListener() {
     if (!session?.user) {
       clearCurrentState();
       updateNavigation();
-      displayPage('home-page');
+      displayPage('login-page');
       return;
     }
     try {
@@ -279,8 +300,7 @@ async function restoreSession() {
     displayPage(appState.currentAdmin ? 'admin-dashboard-page' : 'dashboard-page');
   } else {
     updateNavigation();
-    displayPage('home-page');
-    await updateLeaderboard();
+    displayPage('login-page');
   }
 }
 
@@ -653,6 +673,11 @@ function prepareEntryDateInput() {
   if (!entryInput.value) entryInput.value = formatDate(today);
 }
 
+// Renders tap-friendly prayer cards for mobile screens.
+// On desktop these are hidden via CSS; the regular table is shown instead.
+
+
+
 function formatDate(date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
     .toISOString()
@@ -859,6 +884,7 @@ async function handleSalahSubmit(e) {
   resetPrayerTable();
   renderProgressPath(appState.currentProgress.streak);
   await loadMyHistory();
+  leaderboardCache.ts = 0; // invalidate cache after own submission
   await updateLeaderboard();
 
   const messages = ['Your Salah entry has been submitted successfully.'];
@@ -1071,7 +1097,16 @@ function initials(name) {
     .join('');
 }
 
-async function updateLeaderboard() {
+async function updateLeaderboard(force = false) {
+  const now = Date.now();
+  if (!force && leaderboardCache.data && now - leaderboardCache.ts < leaderboardCache.TTL) {
+    const rows = leaderboardCache.data;
+    renderLeaderboardSimple(document.getElementById('preview-leaderboard'), rows.slice(0, 5));
+    renderLeaderboardSimple(document.getElementById('leaderboard-body'), rows);
+    renderRaceTrack(rows);
+    return;
+  }
+
   const [profilesRes, progressRes] = await Promise.all([
     supabaseClient
       .from('profiles')
@@ -1097,6 +1132,9 @@ async function updateLeaderboard() {
       streak: streakMap.get(p.id) || 0
     }))
     .sort((a, b) => b.streak - a.streak || a.full_name.localeCompare(b.full_name));
+
+  leaderboardCache.data = rows;
+  leaderboardCache.ts = Date.now();
 
   renderLeaderboardSimple(document.getElementById('preview-leaderboard'), rows.slice(0, 5));
   renderLeaderboardSimple(document.getElementById('leaderboard-body'), rows);
@@ -1349,6 +1387,7 @@ async function adminApproveUser(userId) {
 
   if (res.error) throw res.error;
 
+  leaderboardCache.ts = 0;
   await Promise.all([loadPendingApprovals(), loadAdminUsers(), updateLeaderboard()]);
 
   await showPopup({
