@@ -1102,7 +1102,6 @@ async function updateLeaderboard(force = false) {
   if (!force && leaderboardCache.data && now - leaderboardCache.ts < leaderboardCache.TTL) {
     const rows = leaderboardCache.data;
     renderLeaderboard(rows);
-    renderRaceTrack(rows);
     return;
   }
 
@@ -1136,7 +1135,6 @@ async function updateLeaderboard(force = false) {
   leaderboardCache.ts = Date.now();
 
   renderLeaderboard(rows);
-  renderRaceTrack(rows);
 }
 
 function renderLeaderboard(rows) {
@@ -1206,54 +1204,6 @@ function renderList(rows) {
 
 // Keep old name as alias so cache path still works
 function renderLeaderboardSimple(target, rows) { /* no-op: replaced by renderLeaderboard */ }
-
-function renderRaceTrack(rows) {
-  const host = document.getElementById('leaderboard-race-track');
-  if (!host) return;
-
-  host.innerHTML = '';
-
-  const groups = new Map();
-  rows.forEach((row) => {
-    const day = Math.max(1, Math.min(40, row.streak || 0));
-    if (!groups.has(day)) groups.set(day, []);
-    groups.get(day).push(row);
-  });
-
-  for (let day = 1; day <= 40; day++) {
-    const cell = document.createElement('div');
-    cell.className = 'race-cell';
-
-    const players = groups.get(day) || [];
-    const bubbles = players.map((player, i) => {
-      const delay = (i * 0.06).toFixed(2);
-      return `<span class="race-bubble" style="background:${colorFromString(player.full_name)};animation-delay:${delay}s">
-        ${initials(player.full_name)}
-        <span class="race-tooltip">${escapeHtml(player.full_name)}<br>Day ${day}</span>
-      </span>`;
-    }).join('');
-
-    cell.innerHTML = `<div class="race-day">D${day}</div><div class="race-bubbles">${bubbles}</div>`;
-    host.appendChild(cell);
-  }
-
-  // single delegated listener — no duplicate registrations
-  host.addEventListener('click', (e) => {
-    const bubble = e.target.closest('.race-bubble');
-    if (!bubble) return;
-    e.stopPropagation();
-    const isActive = bubble.classList.contains('active');
-    host.querySelectorAll('.race-bubble.active').forEach((b) => b.classList.remove('active'));
-    if (!isActive) bubble.classList.add('active');
-  });
-
-  if (!host._outsideListenerAdded) {
-    document.addEventListener('click', () =>
-      host.querySelectorAll('.race-bubble.active').forEach((b) => b.classList.remove('active'))
-    );
-    host._outsideListenerAdded = true;
-  }
-}
 
 async function loadAdminDashboard() {
   if (!appState.currentAdmin) {
