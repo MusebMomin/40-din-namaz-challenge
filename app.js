@@ -734,14 +734,16 @@ function showSubmissionWarning(msg) {
 
 function handleTakbeerCheckboxChange(e) {
   const prayer = e.target.dataset.prayer;
-  const jamat = document.querySelector(`.status-checkbox[data-prayer="${prayer}"][data-status="jamat"]`);
+  const jamat  = document.querySelector(`.status-checkbox[data-prayer="${prayer}"][data-status="jamat"]`);
   const noJamat = document.querySelector(`.status-checkbox[data-prayer="${prayer}"][data-status="no-jamat"]`);
-  const qaza = document.querySelector(`.status-checkbox[data-prayer="${prayer}"][data-status="qaza"]`);
+  const school  = document.querySelector(`.status-checkbox[data-prayer="${prayer}"][data-status="no-jamat-school"]`);
+  const qaza   = document.querySelector(`.status-checkbox[data-prayer="${prayer}"][data-status="qaza"]`);
 
   if (e.target.checked) {
-    jamat.checked = true;
+    jamat.checked   = true;
     noJamat.checked = false;
-    qaza.checked = false;
+    if (school) school.checked = false;
+    qaza.checked    = false;
   }
 }
 
@@ -1096,6 +1098,7 @@ function renderPrayerStatus(status, takbeer) {
   if (!status) return '-';
   if (status === 'jamat' && takbeer) return 'Takbeer-e-Ula';
   if (status === 'no-jamat') return 'No Jamat';
+  if (status === 'no-jamat-school') return 'School/College';
   return titleCase(status);
 }
 
