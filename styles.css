@@ -779,6 +779,7 @@ body {
 
 .pfc-jamat:has(input:checked)   { background: #d1fae5; border-color: var(--primary); color: #065f46; }
 .pfc-nojamat:has(input:checked) { background: #fef9c3; border-color: #b45309;        color: #854d0e; }
+.pfc-school:has(input:checked)  { background: #ccfbf1; border-color: #0f766e;         color: #134e4a; }
 .pfc-qaza:has(input:checked)    { background: #fee2e2; border-color: var(--danger);   color: #991b1b; }
 .pfc-takbeer:has(input:checked) { background: #ede9fe; border-color: #7c3aed;         color: #5b21b6; }
 
