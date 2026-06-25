@@ -28,6 +28,7 @@ const appState = {
 
 // Simple in-memory cache for leaderboard (60-second TTL)
 const leaderboardCache = { data: null, ts: 0, TTL: 60_000 };
+let _breakCheckDate = null; // guard: run missed-day check at most once per calendar day
 
 window.addEventListener('DOMContentLoaded', async () => {
   setupPopup();
@@ -325,6 +326,7 @@ function clearCurrentState() {
   appState.currentProgress = null;
   appState.currentAdmin = null;
   appState.selectedAdminUserId = null;
+  _breakCheckDate = null; // reset so check reruns on next login
 }
 
 function normalizeProgress(row = {}) {
@@ -523,6 +525,13 @@ async function logout() {
 async function evaluateMissedDayBreakForCurrentUser() {
   if (!appState.currentUser || !appState.currentProgress) return;
 
+  const todayStr = formatDate(new Date());
+
+  // Only fire once per calendar day per session to prevent double-consuming lifelines
+  // when the function is called from both updateDashboard and handleSalahSubmit.
+  if (_breakCheckDate === todayStr) return;
+  _breakCheckDate = todayStr;
+
   const today = startOfDay(new Date());
   const last = appState.currentProgress.last_submission_date
     ? startOfDay(appState.currentProgress.last_submission_date)
@@ -530,8 +539,9 @@ async function evaluateMissedDayBreakForCurrentUser() {
 
   if (!last) return;
 
+  // Guard against NaN from malformed date strings (e.g. ISO timestamps from DB)
   const missed = Math.max(0, Math.floor((today - last) / DAY_MS));
-  if (missed < 2) return;
+  if (!Number.isFinite(missed) || missed < 2) return;
 
   if (appState.currentProgress.current_lifelines > 0) {
     const update = await supabaseClient
@@ -692,9 +702,12 @@ function formatDate(date) {
 }
 
 function startOfDay(dateOrStr) {
-  const d = typeof dateOrStr === 'string'
-    ? new Date(dateOrStr + 'T00:00:00')
-    : new Date(dateOrStr);
+  // Strip time/timezone component so ISO timestamps like "2026-06-23T00:00:00+05:00"
+  // don't produce an Invalid Date when we naively append 'T00:00:00'.
+  const dateOnly = typeof dateOrStr === 'string' ? dateOrStr.split('T')[0] : dateOrStr;
+  const d = typeof dateOnly === 'string'
+    ? new Date(dateOnly + 'T00:00:00')
+    : new Date(dateOnly);
   d.setHours(0, 0, 0, 0);
   return d;
 }
