@@ -23,7 +23,8 @@ const appState = {
   checkpoints: [...DEFAULT_CHECKPOINTS],
   adminUsers: [],
   selectedAdminUserId: null,
-  popupResolve: null
+  popupResolve: null,
+  stateLoadedAt: null  // timestamp of last successful loadUserContext
 };
 
 // Simple in-memory cache for leaderboard (60-second TTL)
@@ -292,13 +293,18 @@ function bindAuthListener() {
 }
 
 async function restoreSession() {
-  await loadCheckpoints();
-  const { data } = await supabaseClient.auth.getSession();
+  // Run checkpoint fetch and session check in parallel — saves one full RTT
+  const [, { data }] = await Promise.all([
+    loadCheckpoints(),
+    supabaseClient.auth.getSession()
+  ]);
 
   if (data.session?.user) {
     await loadUserContext(data.session.user);
     updateNavigation();
     displayPage(appState.currentAdmin ? 'admin-dashboard-page' : 'dashboard-page');
+    // Warm leaderboard cache in background after session restore
+    updateLeaderboard().catch(() => {});
   } else {
     updateNavigation();
     displayPage('login-page');
@@ -327,6 +333,7 @@ function clearCurrentState() {
   appState.currentAdmin = null;
   appState.selectedAdminUserId = null;
   _breakCheckDate = null; // reset so check reruns on next login
+  appState.stateLoadedAt = null;
 }
 
 function normalizeProgress(row = {}) {
@@ -461,6 +468,8 @@ async function handleLogin(e) {
   await loadUserContext(data.user);
   document.getElementById('login-form').reset();
   displayPage(appState.currentAdmin ? 'admin-dashboard-page' : 'dashboard-page');
+  // Warm leaderboard cache in background — don’t block login flow
+  updateLeaderboard().catch(() => {});
 }
 
 async function loadUserContext(user) {
@@ -478,9 +487,7 @@ async function loadUserContext(user) {
   appState.currentProfile = profileResult.data;
   appState.currentProgress = normalizeProgress(progressResult.data);
   appState.currentAdmin = appState.currentProfile.is_admin ? appState.currentProfile : null;
-
-  await loadCheckpoints();
-  await updateLeaderboard();
+  appState.stateLoadedAt = Date.now();
 }
 
 async function refreshCurrentUserState() {
@@ -590,7 +597,14 @@ async function updateDashboard() {
     return;
   }
 
-  await refreshCurrentUserState();
+  // Skip re-fetching if state was loaded within the last 10 seconds
+  // (avoids a redundant round-trip right after restoreSession/login loads fresh data)
+  const STATE_FRESH_MS = 10_000;
+  const isFresh = appState.stateLoadedAt && (Date.now() - appState.stateLoadedAt < STATE_FRESH_MS);
+  if (!isFresh) {
+    await refreshCurrentUserState();
+  }
+
   await evaluateMissedDayBreakForCurrentUser();
 
   const p = appState.currentProfile;
@@ -699,6 +713,15 @@ function formatDate(date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
     .toISOString()
     .split('T')[0];
+}
+
+// Convert yyyy-mm-dd (or ISO timestamp) to dd-mm-yyyy for display only.
+// formatDate() must remain yyyy-mm-dd for HTML date inputs and DB storage.
+function displayDate(isoStr) {
+  if (!isoStr) return '-';
+  const parts = String(isoStr).split('T')[0].split('-');
+  if (parts.length !== 3) return isoStr;
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
 }
 
 function startOfDay(dateOrStr) {
@@ -1094,7 +1117,7 @@ async function loadMyHistory() {
 
   tbody.innerHTML = data.map((row) => `
     <tr>
-      <td>${escapeHtml(row.entry_date)}</td>
+      <td>${displayDate(row.entry_date)}</td>
       <td>${renderPrayerStatus(row.fajr_status || row.fajr, row.fajr_takbeer)}</td>
       <td>${renderPrayerStatus(row.zuhr_status || row.zuhr, row.zuhr_takbeer)}</td>
       <td>${renderPrayerStatus(row.asr_status || row.asr, row.asr_takbeer)}</td>
@@ -1393,7 +1416,7 @@ async function loadAdminUserDetails(userId) {
   tbody.innerHTML = history.length
     ? history.map((row) => `
       <tr>
-        <td>${escapeHtml(row.entry_date)}</td>
+        <td>${displayDate(row.entry_date)}</td>
         <td>${renderPrayerStatus(row.fajr_status || row.fajr, row.fajr_takbeer)}</td>
         <td>${renderPrayerStatus(row.zuhr_status || row.zuhr, row.zuhr_takbeer)}</td>
         <td>${renderPrayerStatus(row.asr_status || row.asr, row.asr_takbeer)}</td>
@@ -1760,15 +1783,14 @@ function titleCase(value) {
 }
 
 function formatTimestamp(value) {
-  return value
-    ? new Date(value).toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit'
-      })
-    : '-';
+  if (!value) return '-';
+  const d = new Date(value);
+  const dd   = String(d.getDate()).padStart(2, '0');
+  const mm   = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  const hh   = String(d.getHours()).padStart(2, '0');
+  const min  = String(d.getMinutes()).padStart(2, '0');
+  return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
 }
 
 function escapeHtml(value) {
