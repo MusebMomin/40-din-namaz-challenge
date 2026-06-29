@@ -1016,6 +1016,9 @@ function evaluateSubmissionOutcome(entry, progress) {
       lifelineUsed = true;
       streakBroken = false;
       breakReason = 'Lifeline used';
+      // Streak stays the same — lifeline protects but does not advance
+      streak = progress.streak;
+      checkpoint = highestCheckpointAtOrBelow(streak);
       lifelineEvents.push({
         event_type: 'use',
         count_change: -1,
