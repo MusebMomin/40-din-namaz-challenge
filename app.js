@@ -849,7 +849,11 @@ async function handleSalahSubmit(e) {
   const windowCheck = validateEntryDateWindow(entryDate);
 
   if (!windowCheck.ok) {
-    showSubmissionWarning(windowCheck.message);
+    await showPopup({
+      title: 'Cannot submit yet, try after 8pm !',
+      message: windowCheck.message,
+      emoji: '⏰'
+    });
     return;
   }
 
