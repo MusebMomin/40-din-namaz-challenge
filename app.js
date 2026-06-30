@@ -792,6 +792,14 @@ function handleStatusCheckboxChange(e) {
     all.forEach((box) => {
       if (box !== e.target) box.checked = false;
     });
+
+    // School = Jamat equivalent: auto-switch to Jamat so it stores correctly
+    if (status === 'no-jamat-school') {
+      e.target.checked = false;
+      const jamat = document.querySelector(`.status-checkbox[data-prayer="${prayer}"][data-status="jamat"]`);
+      if (jamat) jamat.checked = true;
+      return;
+    }
   }
 
   const takbeer = document.querySelector(`.takbeer-checkbox[data-prayer="${prayer}"]`);
@@ -955,6 +963,12 @@ async function handleSalahSubmit(e) {
     title = 'Lifeline used';
   }
 
+  if (evaluation.streakDecremented) {
+    messages.push(`📉 Streak reduced by 1 because ${evaluation.decrementReason}.`);
+    emoji = '📉';
+    title = 'Streak reduced';
+  }
+
   if (evaluation.dailyRewardGranted) {
     messages.push('🎁 You earned +1 lifeline for a perfect Takbeer-e-Ula day.');
     emoji = '🎉';
@@ -985,7 +999,7 @@ function evaluateSubmissionOutcome(entry, progress) {
   const takbeers = PRAYERS.map((p) => entry[p].takbeer);
 
   const noJamatCount = statuses.filter((v) => v === 'no-jamat').length;
-  const hasQaza = statuses.includes('qaza');
+  const qazaCount    = statuses.filter((v) => v === 'qaza').length;
   const perfectTakbeerDay = statuses.every((v) => v === 'jamat') && takbeers.every(Boolean);
 
   let streak = progress.streak + 1;
@@ -995,18 +1009,30 @@ function evaluateSubmissionOutcome(entry, progress) {
   let lifelinesUsed = progress.lifelines_used;
   let milestoneRewards = [...progress.milestone_rewards];
   let streakBroken = false;
+  let streakDecremented = false;
+  let decrementReason = null;
   let breakReason = null;
   let lifelineUsed = false;
   let dailyRewardGranted = false;
   const milestoneRewardsGranted = [];
   const lifelineEvents = [];
 
-  if (hasQaza) {
+  if (qazaCount >= 2) {
+    // 2+ Qaza → full streak break
     streakBroken = true;
-    breakReason = 'a Qaza prayer was marked';
+    breakReason = '2 or more Qaza prayers were marked';
+  } else if (qazaCount === 1) {
+    // 1 Qaza → streak -1, no break
+    streak = Math.max(0, progress.streak - 1);
+    checkpoint = highestCheckpointAtOrBelow(streak);
+    streakDecremented = true;
+    decrementReason = '1 Qaza prayer was marked';
   } else if (noJamatCount >= 2) {
-    streakBroken = true;
-    breakReason = '2 or more No Jamat prayers were marked';
+    // 2+ No Jamat → streak -1, no break
+    streak = Math.max(0, progress.streak - 1);
+    checkpoint = highestCheckpointAtOrBelow(streak);
+    streakDecremented = true;
+    decrementReason = '2 or more No Jamat prayers were marked';
   }
 
   if (streakBroken) {
@@ -1030,7 +1056,8 @@ function evaluateSubmissionOutcome(entry, progress) {
     }
   }
 
-  if (!streakBroken && perfectTakbeerDay) {
+  // Takbeer reward only on a clean +1 day (no penalty, no break)
+  if (!streakBroken && !streakDecremented && perfectTakbeerDay) {
     currentLifelines += 1;
     lifelinesEarned += 1;
     dailyRewardGranted = true;
@@ -1063,6 +1090,8 @@ function evaluateSubmissionOutcome(entry, progress) {
     lifelinesUsed,
     milestoneRewards,
     streakBroken,
+    streakDecremented,
+    decrementReason,
     breakReason,
     lifelineUsed,
     dailyRewardGranted,
