@@ -24,7 +24,7 @@ const appState = {
   adminUsers: [],
   selectedAdminUserId: null,
   popupResolve: null,
-  stateLoadedAt: null  // timestamp of last successful loadUserContext
+  stateLoadedAt: null  // timestamp of last successful loadUserContext Museb
 };
 
 // Simple in-memory cache for leaderboard (60-second TTL)
