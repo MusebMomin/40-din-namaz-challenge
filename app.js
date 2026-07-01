@@ -918,8 +918,17 @@ async function handleSalahSubmit(e) {
     streak_after_submission: evaluation.streak,
     lifeline_used: evaluation.lifelineUsed,
     streak_broken: evaluation.streakBroken,
-    break_reason: evaluation.breakReason
+    break_reason: evaluation.breakReason || evaluation.decrementReason || null
   };
+
+  // Log streak outcome for debugging
+  if (evaluation.streakBroken) {
+    console.warn(`[Streak] BREAK — before: ${before}, after: ${evaluation.streak}, reason: ${evaluation.breakReason}`);
+  } else if (evaluation.streakDecremented) {
+    console.info(`[Streak] DECREMENT — before: ${before}, after: ${evaluation.streak}, reason: ${evaluation.decrementReason}`);
+  } else {
+    console.info(`[Streak] +1 — before: ${before}, after: ${evaluation.streak}`);
+  }
 
   const inserted = await supabaseClient
     .from('salah_entries')
