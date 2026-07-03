@@ -24,12 +24,12 @@ const appState = {
   adminUsers: [],
   selectedAdminUserId: null,
   popupResolve: null,
-  stateLoadedAt: null  // timestamp of last successful loadUserContext Museb
+  stateLoadedAt: null  // timestamp of last successful loadUserContext
 };
 
 // Simple in-memory cache for leaderboard (60-second TTL)
 const leaderboardCache = { data: null, ts: 0, TTL: 60_000 };
-let _breakCheckDate = null; // guard: run missed-day check at most once per calendar day
+let _breakCheckDate = null; // unused, kept to avoid reference errors on older cached pages
 
 window.addEventListener('DOMContentLoaded', async () => {
   setupPopup();
@@ -332,7 +332,7 @@ function clearCurrentState() {
   appState.currentProgress = null;
   appState.currentAdmin = null;
   appState.selectedAdminUserId = null;
-  _breakCheckDate = null; // reset so check reruns on next login
+  _breakCheckDate = null;
   appState.stateLoadedAt = null;
 }
 
@@ -529,68 +529,6 @@ async function logout() {
   displayPage('home-page');
 }
 
-async function evaluateMissedDayBreakForCurrentUser() {
-  if (!appState.currentUser || !appState.currentProgress) return;
-
-  const todayStr = formatDate(new Date());
-
-  // Only fire once per calendar day per session to prevent double-consuming lifelines
-  // when the function is called from both updateDashboard and handleSalahSubmit.
-  if (_breakCheckDate === todayStr) return;
-  _breakCheckDate = todayStr;
-
-  const today = startOfDay(new Date());
-  const last = appState.currentProgress.last_submission_date
-    ? startOfDay(appState.currentProgress.last_submission_date)
-    : null;
-
-  if (!last) return;
-
-  // Guard against NaN from malformed date strings (e.g. ISO timestamps from DB)
-  const missed = Math.max(0, Math.floor((today - last) / DAY_MS));
-  if (!Number.isFinite(missed) || missed < 2) return;
-
-  if (appState.currentProgress.current_lifelines > 0) {
-    const update = await supabaseClient
-      .from('challenge_progress')
-      .update({
-        current_lifelines: appState.currentProgress.current_lifelines - 1,
-        lifelines_used: appState.currentProgress.lifelines_used + 1,
-        missed_days_count: 0,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', appState.currentUser.id)
-      .select()
-      .single();
-
-    if (!update.error) {
-      appState.currentProgress = normalizeProgress(update.data);
-      await insertLifelineEvents(appState.currentUser.id, [
-        {
-          event_type: 'use',
-          count_change: -1,
-          reason: 'Automatic protection after 2 missed days'
-        }
-      ]);
-    }
-  } else {
-    const reset = await supabaseClient
-      .from('challenge_progress')
-      .update({
-        streak: appState.currentProgress.current_checkpoint,
-        missed_days_count: missed,
-        updated_at: new Date().toISOString()
-      })
-      .eq('user_id', appState.currentUser.id)
-      .select()
-      .single();
-
-    if (!reset.error) {
-      appState.currentProgress = normalizeProgress(reset.data);
-    }
-  }
-}
-
 async function updateDashboard() {
   if (!appState.currentUser) {
     displayPage('login-page');
@@ -604,8 +542,6 @@ async function updateDashboard() {
   if (!isFresh) {
     await refreshCurrentUserState();
   }
-
-  await evaluateMissedDayBreakForCurrentUser();
 
   const p = appState.currentProfile;
   const progress = appState.currentProgress;
@@ -649,21 +585,21 @@ function renderProgressPath(currentStreak) {
 
     node.className = classes.join(' ');
 
-    let icon = '📍';
+    const isDone = day <= currentStreak;
+    let icon = isDone ? '✅' : '📍';
     let iconClass = '';
 
-    if (day <= currentStreak) icon = '✅';
-    if (checkpointDays.has(day)) {
+    if (!isDone && checkpointDays.has(day)) {
       icon = '📍';
       iconClass = 'checkpoint-icon';
     }
-    if (MILESTONE_REWARDS.includes(day)) {
+    if (!isDone && MILESTONE_REWARDS.includes(day)) {
       icon = '🎁';
       iconClass = 'milestone-icon';
     }
     if (day === 40) {
-      icon = '🏁';
-      iconClass = 'finish-icon';
+      icon = isDone ? '✅' : '🏁';
+      iconClass = isDone ? '' : 'finish-icon';
     }
 
     node.innerHTML = `
@@ -843,8 +779,6 @@ async function handleSalahSubmit(e) {
     return;
   }
 
-  await evaluateMissedDayBreakForCurrentUser();
-
   const entryDate = document.getElementById('entry-date').value;
   const windowCheck = validateEntryDateWindow(entryDate);
 
@@ -983,7 +917,7 @@ async function handleSalahSubmit(e) {
   }
 
   if (evaluation.dailyRewardGranted) {
-    messages.push('🎁 You earned +1 lifeline for a perfect Takbeer-e-Ula day.');
+    messages.push('🎁 You earned +1 lifeline and +2 streak for a perfect Takbeer-e-Ula day!');
     emoji = '🎉';
     title = 'Congratulations!';
   }
@@ -1035,17 +969,34 @@ function evaluateSubmissionOutcome(entry, progress) {
     streakBroken = true;
     breakReason = '2 or more Qaza prayers were marked';
   } else if (qazaCount === 1) {
-    // 1 Qaza → streak -1, no break
+    // 1 Qaza: use a lifeline if available, else streak -1
+    if (currentLifelines > 0) {
+      currentLifelines -= 1;
+      lifelinesUsed += 1;
+      lifelineUsed = true;
+      // streak does not advance (stays at progress.streak)
+      streak = progress.streak;
+      checkpoint = highestCheckpointAtOrBelow(streak);
+      console.info(`[Streak] Lifeline used for 1 Qaza — streak held at ${streak}`);
+      lifelineEvents.push({
+        event_type: 'use',
+        count_change: -1,
+        reason: '1 Qaza prayer — lifeline auto-used to protect streak'
+      });
+    } else {
+      // No lifeline — streak -1
+      streak = Math.max(0, progress.streak - 1);
+      checkpoint = highestCheckpointAtOrBelow(streak);
+      streakDecremented = true;
+      decrementReason = '1 Qaza prayer was marked (no lifeline available)';
+      console.info(`[Streak] DECREMENT — 1 Qaza, no lifeline — ${progress.streak} → ${streak}`);
+    }
+  } else if (noJamatCount >= 3) {
+    // 3+ No Jamat → streak -1, no break
     streak = Math.max(0, progress.streak - 1);
     checkpoint = highestCheckpointAtOrBelow(streak);
     streakDecremented = true;
-    decrementReason = '1 Qaza prayer was marked';
-  } else if (noJamatCount >= 2) {
-    // 2+ No Jamat → streak -1, no break
-    streak = Math.max(0, progress.streak - 1);
-    checkpoint = highestCheckpointAtOrBelow(streak);
-    streakDecremented = true;
-    decrementReason = '2 or more No Jamat prayers were marked';
+    decrementReason = '3 or more No Jamat prayers were marked';
   }
 
   if (streakBroken) {
@@ -1069,15 +1020,18 @@ function evaluateSubmissionOutcome(entry, progress) {
     }
   }
 
-  // Takbeer reward only on a clean +1 day (no penalty, no break)
-  if (!streakBroken && !streakDecremented && perfectTakbeerDay) {
+  // Takbeer reward: lifeline +1 AND streak +2 (only on a clean day — no penalty, no break)
+  if (!streakBroken && !streakDecremented && !lifelineUsed && perfectTakbeerDay) {
     currentLifelines += 1;
     lifelinesEarned += 1;
     dailyRewardGranted = true;
+    // Bonus: streak advances by 2 instead of 1 on a perfect Takbeer day
+    streak = progress.streak + 2;
+    checkpoint = highestCheckpointAtOrBelow(streak);
     lifelineEvents.push({
       event_type: 'earn',
       count_change: 1,
-      reason: 'Perfect Takbeer-e-Ula day'
+      reason: 'Perfect Takbeer-e-Ula day (+2 streak, +1 lifeline)'
     });
   }
 
@@ -1177,6 +1131,7 @@ async function loadMyHistory() {
 
 function renderPrayerStatus(status, takbeer) {
   if (!status) return '-';
+  if (status === 'admin') return '<em style="color:var(--muted)">—</em>';
   if (status === 'jamat' && takbeer) return 'Takbeer-e-Ula';
   if (status === 'no-jamat') return 'No Jamat';
   if (status === 'no-jamat-school') return 'School/College';
@@ -1535,6 +1490,22 @@ async function adminSetStreak() {
 
   if (res.error) throw res.error;
 
+  // Log admin correction to salah_entries as a note row
+  await supabaseClient.from('salah_entries').insert({
+    user_id: appState.selectedAdminUserId,
+    entry_date: formatDate(new Date()),
+    submission_date: formatDate(new Date()),
+    submitted_at: new Date().toISOString(),
+    fajr_status: 'admin', zuhr_status: 'admin', asr_status: 'admin',
+    maghrib_status: 'admin', isha_status: 'admin',
+    fajr: 'admin', zuhr: 'admin', asr: 'admin', maghrib: 'admin', isha: 'admin',
+    streak_before_submission: null,
+    streak_after_submission: value,
+    lifeline_used: false,
+    streak_broken: false,
+    break_reason: `Admin correction: streak set to ${value} by ${appState.currentProfile?.full_name || 'admin'}`
+  });
+
   await loadAdminUsers();
   await updateLeaderboard();
 
@@ -1589,6 +1560,22 @@ async function adminAdjustLifelines() {
     reason: 'Admin adjustment',
     created_at: new Date().toISOString(),
     created_by: appState.currentUser.id
+  });
+
+  // Log admin lifeline correction to salah_entries
+  await supabaseClient.from('salah_entries').insert({
+    user_id: appState.selectedAdminUserId,
+    entry_date: formatDate(new Date()),
+    submission_date: formatDate(new Date()),
+    submitted_at: new Date().toISOString(),
+    fajr_status: 'admin', zuhr_status: 'admin', asr_status: 'admin',
+    maghrib_status: 'admin', isha_status: 'admin',
+    fajr: 'admin', zuhr: 'admin', asr: 'admin', maghrib: 'admin', isha: 'admin',
+    streak_before_submission: null,
+    streak_after_submission: null,
+    lifeline_used: false,
+    streak_broken: false,
+    break_reason: `Admin correction: lifelines ${delta > 0 ? '+' : ''}${delta} by ${appState.currentProfile?.full_name || 'admin'}`
   });
 
   await loadAdminUsers();
