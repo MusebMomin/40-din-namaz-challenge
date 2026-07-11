@@ -803,8 +803,6 @@ body {
 }
 .sunnat-select:focus { outline: none; border-color: var(--primary); }
 .sunnat-select:hover { border-color: var(--primary); }
-/* Highlight when any sunnah selected */
-.sunnat-select:not([value="0"]) { border-color: #0f766e; background-color: #f0fdf9; }
 
 /* Small badge in history table showing sunnah count */
 .sunnat-badge {
