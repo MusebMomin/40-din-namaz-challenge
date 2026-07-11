@@ -128,9 +128,20 @@ function setupEventListeners() {
 
   const salahForm = document.getElementById('salah-form');
   if (salahForm) {
-    salahForm.addEventListener('submit', async (e) =>
-      withLoader('Submitting your Salah entry...', () => handleSalahSubmit(e))
-    );
+    salahForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      try {
+        await withLoader('Submitting your Salah entry...', () => handleSalahSubmit(e));
+      } catch (err) {
+        console.error('[Submit] Unhandled error:', err);
+        await showPopup({
+          title: 'Submission error',
+          message: err?.message || 'An unexpected error occurred. Check the browser console for details.',
+          emoji: '❌',
+          danger: true
+        });
+      }
+    });
   }
 
   document.querySelectorAll('.status-checkbox').forEach((cb) =>
@@ -775,8 +786,6 @@ function collectPrayerStatus() {
 }
 
 async function handleSalahSubmit(e) {
-  e.preventDefault();
-
   if (!appState.currentProfile?.approved) {
     await showPopup({
       title: 'Approval pending',
@@ -846,7 +855,6 @@ async function handleSalahSubmit(e) {
     zuhr_sunnat: entry.zuhr.sunnat,
     asr_status: entry.asr.status,
     asr_takbeer: entry.asr.takbeer,
-    asr_sunnat: 0,
     maghrib_status: entry.maghrib.status,
     maghrib_takbeer: entry.maghrib.takbeer,
     maghrib_sunnat: entry.maghrib.sunnat,
