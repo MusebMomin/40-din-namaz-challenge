@@ -849,19 +849,15 @@ async function handleSalahSubmit(e) {
 
     fajr_status: entry.fajr.status,
     fajr_takbeer: entry.fajr.takbeer,
-    fajr_sunnat: entry.fajr.sunnat,
     zuhr_status: entry.zuhr.status,
     zuhr_takbeer: entry.zuhr.takbeer,
-    zuhr_sunnat: entry.zuhr.sunnat,
     asr_status: entry.asr.status,
     asr_takbeer: entry.asr.takbeer,
     maghrib_status: entry.maghrib.status,
     maghrib_takbeer: entry.maghrib.takbeer,
-    maghrib_sunnat: entry.maghrib.sunnat,
     isha_status: entry.isha.status,
     isha_takbeer: entry.isha.takbeer,
-    isha_sunnat: entry.isha.sunnat,
-
+    
     fajr: entry.fajr.status,
     zuhr: entry.zuhr.status,
     asr: entry.asr.status,
