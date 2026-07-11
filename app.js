@@ -1739,12 +1739,15 @@ async function rebuildUserProgressFromHistory(userId) {
   });
 
   for (const row of rows) {
+    // Skip admin-log rows — they are audit records, not real salah submissions
+    if (row.fajr_status === 'admin' || row.fajr === 'admin') continue;
+
     const payload = {
-      fajr: { status: row.fajr_status || row.fajr, takbeer: !!row.fajr_takbeer },
-      zuhr: { status: row.zuhr_status || row.zuhr, takbeer: !!row.zuhr_takbeer },
-      asr: { status: row.asr_status || row.asr, takbeer: !!row.asr_takbeer },
-      maghrib: { status: row.maghrib_status || row.maghrib, takbeer: !!row.maghrib_takbeer },
-      isha: { status: row.isha_status || row.isha, takbeer: !!row.isha_takbeer }
+      fajr:    { status: row.fajr_status    || row.fajr,    takbeer: !!row.fajr_takbeer,    sunnat: row.fajr_sunnat    || 0 },
+      zuhr:    { status: row.zuhr_status    || row.zuhr,    takbeer: !!row.zuhr_takbeer,    sunnat: row.zuhr_sunnat    || 0 },
+      asr:     { status: row.asr_status     || row.asr,     takbeer: !!row.asr_takbeer,     sunnat: row.asr_sunnat     || 0 },
+      maghrib: { status: row.maghrib_status || row.maghrib, takbeer: !!row.maghrib_takbeer, sunnat: row.maghrib_sunnat || 0 },
+      isha:    { status: row.isha_status    || row.isha,    takbeer: !!row.isha_takbeer,    sunnat: row.isha_sunnat    || 0 }
     };
 
     const evaluation = evaluateSubmissionOutcome(payload, progress);
