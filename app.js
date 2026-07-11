@@ -10,7 +10,8 @@ const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true }
 });
 
-const PRAYERS = ['fajr', 'zuhr', 'asr', 'maghrib', 'isha'];
+// Max sunnah per prayer — used to determine "all sunnah prayed" condition
+const SUNNAT_MAX = { fajr: 2, zuhr: 6, asr: 0, maghrib: 2, isha: 5 };
 const DEFAULT_CHECKPOINTS = [5, 10, 20, 30, 40];
 const MILESTONE_REWARDS = [10, 20, 30];
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -758,9 +759,13 @@ function collectPrayerStatus() {
       };
     }
 
+    const sunnatEl = document.querySelector(`.sunnat-select[data-prayer="${prayer}"]`);
+    const sunnat   = sunnatEl ? Number(sunnatEl.value) : 0;
+
     out[prayer] = {
-      status: checked[0].dataset.status,
-      takbeer: document.querySelector(`.takbeer-checkbox[data-prayer="${prayer}"]`).checked
+      status:  checked[0].dataset.status,
+      takbeer: document.querySelector(`.takbeer-checkbox[data-prayer="${prayer}"]`).checked,
+      sunnat
     };
   }
 
@@ -833,14 +838,19 @@ async function handleSalahSubmit(e) {
 
     fajr_status: entry.fajr.status,
     fajr_takbeer: entry.fajr.takbeer,
+    fajr_sunnat: entry.fajr.sunnat,
     zuhr_status: entry.zuhr.status,
     zuhr_takbeer: entry.zuhr.takbeer,
+    zuhr_sunnat: entry.zuhr.sunnat,
     asr_status: entry.asr.status,
     asr_takbeer: entry.asr.takbeer,
+    asr_sunnat: 0,
     maghrib_status: entry.maghrib.status,
     maghrib_takbeer: entry.maghrib.takbeer,
+    maghrib_sunnat: entry.maghrib.sunnat,
     isha_status: entry.isha.status,
     isha_takbeer: entry.isha.takbeer,
+    isha_sunnat: entry.isha.sunnat,
 
     fajr: entry.fajr.status,
     zuhr: entry.zuhr.status,
@@ -942,12 +952,16 @@ async function handleSalahSubmit(e) {
 }
 
 function evaluateSubmissionOutcome(entry, progress) {
-  const statuses = PRAYERS.map((p) => entry[p].status);
-  const takbeers = PRAYERS.map((p) => entry[p].takbeer);
+  const statuses  = PRAYERS.map((p) => entry[p].status);
+  const takbeers  = PRAYERS.map((p) => entry[p].takbeer);
 
   const noJamatCount = statuses.filter((v) => v === 'no-jamat').length;
   const qazaCount    = statuses.filter((v) => v === 'qaza').length;
-  const perfectTakbeerDay = statuses.every((v) => v === 'jamat') && takbeers.every(Boolean);
+
+  // Perfect Takbeer day: all Jamat + all Takbeer + all Sunnah at max
+  const allTakbeer  = statuses.every((v) => v === 'jamat') && takbeers.every(Boolean);
+  const allSunnat   = PRAYERS.every((p) => (entry[p].sunnat || 0) >= SUNNAT_MAX[p]);
+  const perfectTakbeerDay = allTakbeer && allSunnat;
 
   let streak = progress.streak + 1;
   let checkpoint = highestCheckpointAtOrBelow(streak);
@@ -1095,6 +1109,9 @@ function resetPrayerTable() {
   document.querySelectorAll('.status-checkbox,.takbeer-checkbox').forEach((cb) => {
     cb.checked = false;
   });
+  document.querySelectorAll('.sunnat-select').forEach((sel) => {
+    sel.value = '0';
+  });
 }
 
 async function loadMyHistory() {
@@ -1117,11 +1134,11 @@ async function loadMyHistory() {
   tbody.innerHTML = data.map((row) => `
     <tr>
       <td>${displayDate(row.entry_date)}</td>
-      <td>${renderPrayerStatus(row.fajr_status || row.fajr, row.fajr_takbeer)}</td>
-      <td>${renderPrayerStatus(row.zuhr_status || row.zuhr, row.zuhr_takbeer)}</td>
+      <td>${renderPrayerStatus(row.fajr_status || row.fajr, row.fajr_takbeer)}${row.fajr_sunnat > 0 ? ` <small class="sunnat-badge">${row.fajr_sunnat}S</small>` : ''}</td>
+      <td>${renderPrayerStatus(row.zuhr_status || row.zuhr, row.zuhr_takbeer)}${row.zuhr_sunnat > 0 ? ` <small class="sunnat-badge">${row.zuhr_sunnat}S</small>` : ''}</td>
       <td>${renderPrayerStatus(row.asr_status || row.asr, row.asr_takbeer)}</td>
-      <td>${renderPrayerStatus(row.maghrib_status || row.maghrib, row.maghrib_takbeer)}</td>
-      <td>${renderPrayerStatus(row.isha_status || row.isha, row.isha_takbeer)}</td>
+      <td>${renderPrayerStatus(row.maghrib_status || row.maghrib, row.maghrib_takbeer)}${row.maghrib_sunnat > 0 ? ` <small class="sunnat-badge">${row.maghrib_sunnat}S</small>` : ''}</td>
+      <td>${renderPrayerStatus(row.isha_status || row.isha, row.isha_takbeer)}${row.isha_sunnat > 0 ? ` <small class="sunnat-badge">${row.isha_sunnat}S</small>` : ''}</td>
       <td>${row.lifeline_used ? 'Yes' : 'No'}</td>
       <td>${escapeHtml(row.break_reason || '-')}</td>
       <td>${formatTimestamp(row.submitted_at)}</td>
