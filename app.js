@@ -10,6 +10,8 @@ const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true }
 });
 
+const PRAYERS = ['fajr', 'zuhr', 'asr', 'maghrib', 'isha'];
+
 // Max sunnah per prayer — used to determine "all sunnah prayed" condition
 const SUNNAT_MAX = { fajr: 2, zuhr: 6, asr: 0, maghrib: 2, isha: 5 };
 const DEFAULT_CHECKPOINTS = [5, 10, 20, 30, 40];
