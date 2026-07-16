@@ -112,6 +112,23 @@ function setupEventListeners() {
     withLoader('Deleting user data...', adminDeleteUser)
   );
 
+  addClick('forgot-password-link', () => displayPage('forgot-password-page'));
+  addClick('back-to-login-link',   () => displayPage('login-page'));
+
+  const forgotForm = document.getElementById('forgot-password-form');
+  if (forgotForm) {
+    forgotForm.addEventListener('submit', async (e) =>
+      withLoader('Sending reset link...', () => handleForgotPassword(e))
+    );
+  }
+
+  const resetForm = document.getElementById('reset-password-form');
+  if (resetForm) {
+    resetForm.addEventListener('submit', async (e) =>
+      withLoader('Updating password...', () => handleResetPassword(e))
+    );
+  }
+
   const loginForm = document.getElementById('login-form');
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) =>
@@ -291,6 +308,11 @@ function closePopup(val) {
 
 function bindAuthListener() {
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    if (_event === 'PASSWORD_RECOVERY') {
+      // User clicked the reset link in their email — show the new-password form
+      displayPage('reset-password-page');
+      return;
+    }
     if (!session?.user) {
       clearCurrentState();
       updateNavigation();
@@ -371,7 +393,8 @@ async function resolveLoginEmail(identifier) {
     login_input: identifier.toLowerCase()
   });
   if (error) throw error;
-  return data || identifier;
+  // Return object so caller knows whether the username/email was actually found
+  return { email: data || identifier, found: !!data };
 }
 
 async function deriveUniqueUsernameFromEmail(email) {
@@ -466,14 +489,25 @@ async function handleLogin(e) {
     return;
   }
 
-  const email = await resolveLoginEmail(identifier);
+  const { email, found } = await resolveLoginEmail(identifier);
+
+  if (!found) {
+    await showPopup({
+      title: 'User not found',
+      message: 'No account found with that username or email. Please check and try again.',
+      emoji: '👤',
+      danger: true
+    });
+    return;
+  }
+
   const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
 
   if (error) {
     await showPopup({
-      title: 'Login failed',
-      message: error.message || 'Invalid login.',
-      emoji: '❌',
+      title: 'Wrong password',
+      message: 'The password you entered is incorrect. Please try again.',
+      emoji: '🔑',
       danger: true
     });
     return;
@@ -914,6 +948,11 @@ async function handleSalahSubmit(e) {
   appState.currentProgress = normalizeProgress(progressRes.data);
   await insertLifelineEvents(appState.currentUser.id, evaluation.lifelineEvents);
 
+  // Refresh dashboard stat pills immediately so user sees new streak/lifelines
+  document.getElementById('current-streak').textContent   = appState.currentProgress.streak;
+  document.getElementById('lifeline-count').textContent   = appState.currentProgress.current_lifelines;
+  document.getElementById('current-checkpoint').textContent = appState.currentProgress.current_checkpoint;
+
   resetPrayerTable();
   renderProgressPath(appState.currentProgress.streak);
   await loadMyHistory();
@@ -1016,11 +1055,26 @@ function evaluateSubmissionOutcome(entry, progress) {
       console.info(`[Streak] DECREMENT — 1 Qaza, no lifeline — ${progress.streak} → ${streak}`);
     }
   } else if (noJamatCount >= 3) {
-    // 3+ No Jamat → streak -1, no break
-    streak = Math.max(0, progress.streak - 1);
-    checkpoint = highestCheckpointAtOrBelow(streak);
-    streakDecremented = true;
-    decrementReason = '3 or more No Jamat prayers were marked';
+    // 3+ No Jamat: use a lifeline if available, else streak -1
+    if (currentLifelines > 0) {
+      currentLifelines -= 1;
+      lifelinesUsed += 1;
+      lifelineUsed = true;
+      streak = progress.streak; // streak does not advance
+      checkpoint = highestCheckpointAtOrBelow(streak);
+      console.info(`[Streak] Lifeline used for 3+ No Jamat — streak held at ${streak}`);
+      lifelineEvents.push({
+        event_type: 'use',
+        count_change: -1,
+        reason: '3+ No Jamat prayers — lifeline auto-used to protect streak'
+      });
+    } else {
+      streak = Math.max(0, progress.streak - 1);
+      checkpoint = highestCheckpointAtOrBelow(streak);
+      streakDecremented = true;
+      decrementReason = '3 or more No Jamat prayers were marked (no lifeline available)';
+      console.info(`[Streak] DECREMENT — 3+ No Jamat, no lifeline — ${progress.streak} → ${streak}`);
+    }
   }
 
   if (streakBroken) {
@@ -1842,6 +1896,79 @@ async function saveCheckpoints() {
 
 function titleCase(value) {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+}
+
+async function handleForgotPassword(e) {
+  e.preventDefault();
+  const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+  if (!email) return;
+
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.href.split('?')[0].split('#')[0]
+  });
+
+  if (error) {
+    await showPopup({
+      title: 'Could not send reset link',
+      message: error.message || 'Please check the email address and try again.',
+      emoji: '❌',
+      danger: true
+    });
+    return;
+  }
+
+  document.getElementById('forgot-password-form').reset();
+  await showPopup({
+    title: 'Reset link sent ✉️',
+    message: `A password reset link has been sent to ${email}. Check your inbox (and spam folder).`,
+    emoji: '✉️'
+  });
+  displayPage('login-page');
+}
+
+async function handleResetPassword(e) {
+  e.preventDefault();
+  const newPwd  = document.getElementById('new-password').value;
+  const confirm = document.getElementById('confirm-password').value;
+
+  if (newPwd.length < 6) {
+    await showPopup({
+      title: 'Password too short',
+      message: 'Password must be at least 6 characters.',
+      emoji: '⚠️'
+    });
+    return;
+  }
+
+  if (newPwd !== confirm) {
+    await showPopup({
+      title: 'Passwords do not match',
+      message: 'Please make sure both password fields are identical.',
+      emoji: '⚠️'
+    });
+    return;
+  }
+
+  const { error } = await supabaseClient.auth.updateUser({ password: newPwd });
+
+  if (error) {
+    await showPopup({
+      title: 'Update failed',
+      message: error.message || 'Unable to update password. The reset link may have expired.',
+      emoji: '❌',
+      danger: true
+    });
+    return;
+  }
+
+  document.getElementById('reset-password-form').reset();
+  await showPopup({
+    title: 'Password updated ✅',
+    message: 'Your password has been changed successfully. Please log in with your new password.',
+    emoji: '✅'
+  });
+  await supabaseClient.auth.signOut();
+  displayPage('login-page');
 }
 
 function formatTimestamp(value) {
