@@ -329,6 +329,16 @@ function bindAuthListener() {
 }
 
 async function restoreSession() {
+  // If this page load came from a password-reset email link, the URL hash will
+  // contain type=recovery. Skip the normal session restore so the
+  // PASSWORD_RECOVERY event (fired by onAuthStateChange) can show the reset form.
+  if (window.location.hash.includes('type=recovery')) {
+    await loadCheckpoints();
+    updateNavigation();
+    displayPage('reset-password-page');
+    return;
+  }
+
   // Run checkpoint fetch and session check in parallel — saves one full RTT
   const [, { data }] = await Promise.all([
     loadCheckpoints(),
