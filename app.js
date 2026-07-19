@@ -24,6 +24,7 @@ const appState = {
   currentProgress: null,
   currentAdmin: null,
   checkpoints: [...DEFAULT_CHECKPOINTS],
+  allowLateEntries: false,
   adminUsers: [],
   selectedAdminUserId: null,
   popupResolve: null,
@@ -98,6 +99,10 @@ function setupEventListeners() {
 
   addClick('save-checkpoints-btn', async () =>
     withLoader('Saving checkpoints...', saveCheckpoints)
+  );
+
+  addClick('toggle-late-entries-btn', async () =>
+    withLoader('Updating setting...', toggleLateEntries)
   );
 
   addClick('set-streak-btn', async () =>
@@ -360,7 +365,7 @@ async function restoreSession() {
 async function loadCheckpoints() {
   const { data } = await supabaseClient
     .from('app_config')
-    .select('checkpoints')
+    .select('checkpoints, allow_late_entries')
     .eq('id', 1)
     .maybeSingle();
 
@@ -368,8 +373,14 @@ async function loadCheckpoints() {
     appState.checkpoints = data.checkpoints.map(Number).sort((a, b) => a - b);
   }
 
+  appState.allowLateEntries = data?.allow_late_entries === true;
+
   const input = document.getElementById('checkpoint-input');
   if (input) input.value = appState.checkpoints.join(',');
+
+  // Sync toggle button state if it exists (admin page)
+  const btn = document.getElementById('toggle-late-entries-btn');
+  if (btn) syncLateEntriesButton(btn);
 }
 
 function clearCurrentState() {
@@ -692,6 +703,11 @@ function prepareEntryDateInput() {
 
   entryInput.max = formatDate(today);
 
+  if (appState.allowLateEntries) {
+    // Allow any past date — remove the min restriction
+    entryInput.removeAttribute('min');
+  }
+
   if (!entryInput.value) {
     // Default to yesterday before Isha, today after Isha
     entryInput.value = now.getHours() < ISHA_HOUR ? formatDate(yesterday) : formatDate(today);
@@ -738,6 +754,23 @@ function validateEntryDateWindow(value) {
   const today = startOfDay(new Date());
   const yesterday = new Date(today.getTime() - DAY_MS);
   const entry = startOfDay(value);
+
+  // Future dates are never allowed
+  if (entry.getTime() > today.getTime()) {
+    return { ok: false, message: 'Future dates are not allowed.' };
+  }
+
+  // When admin has enabled late entries, any past date is valid
+  // (still block submitting today before Isha)
+  if (appState.allowLateEntries) {
+    if (entry.getTime() === today.getTime() && now.getHours() < ISHA_HOUR) {
+      return {
+        ok: false,
+        message: `Today's entry can only be submitted after ${ISHA_HOUR % 12 || 12}:00 PM (Isha time).`
+      };
+    }
+    return { ok: true };
+  }
 
   if (entry.getTime() === today.getTime()) {
     if (now.getHours() < ISHA_HOUR) {
@@ -1915,6 +1948,48 @@ async function rebuildUserProgressFromHistory(userId) {
   if (updateRes.error) throw updateRes.error;
 
   return updateRes.data;
+}
+
+function syncLateEntriesButton(btn) {
+  if (appState.allowLateEntries) {
+    btn.textContent = '📅 Late Entries: ON';
+    btn.classList.remove('btn-light');
+    btn.classList.add('btn-primary');
+  } else {
+    btn.textContent = '📅 Late Entries: OFF';
+    btn.classList.remove('btn-primary');
+    btn.classList.add('btn-light');
+  }
+}
+
+async function toggleLateEntries() {
+  const newValue = !appState.allowLateEntries;
+
+  const res = await supabaseClient
+    .from('app_config')
+    .upsert(
+      {
+        id: 1,
+        allow_late_entries: newValue,
+        updated_at: new Date().toISOString(),
+        updated_by: appState.currentUser.id
+      },
+      { onConflict: 'id' }
+    );
+
+  if (res.error) throw res.error;
+
+  appState.allowLateEntries = newValue;
+  const btn = document.getElementById('toggle-late-entries-btn');
+  if (btn) syncLateEntriesButton(btn);
+
+  await showPopup({
+    title: newValue ? 'Late entries enabled' : 'Late entries disabled',
+    message: newValue
+      ? 'Users can now submit entries for any past date.'
+      : 'Submissions are restricted to today and yesterday only.',
+    emoji: newValue ? '📅' : '🔒'
+  });
 }
 
 async function saveCheckpoints() {
