@@ -7,7 +7,7 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('Missing SUPABASE_CONFI
 
 const { createClient } = window.supabase;
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true }
+  auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true, flowType: 'implicit' }
 });
 
 const PRAYERS = ['fajr', 'zuhr', 'asr', 'maghrib', 'isha'];
@@ -881,6 +881,16 @@ async function handleSalahSubmit(e) {
     return;
   }
 
+  // Always re-fetch progress from DB before evaluating — admin may have changed
+  // streak/lifelines since the user last loaded the dashboard.
+  const freshProgressRes = await supabaseClient
+    .from('challenge_progress')
+    .select('*')
+    .eq('user_id', appState.currentUser.id)
+    .single();
+  if (freshProgressRes.error) throw freshProgressRes.error;
+  appState.currentProgress = normalizeProgress(freshProgressRes.data);
+
   const entry = collected.payload;
   const before = appState.currentProgress.streak;
   const evaluation = evaluateSubmissionOutcome(entry, appState.currentProgress);
@@ -991,6 +1001,11 @@ async function handleSalahSubmit(e) {
     title = 'Congratulations!';
   }
 
+  if (evaluation.sunnatRewardGranted) {
+    messages.push('🌟 You earned +1 lifeline for praying all Salah in Jamat with all Sunnah!');
+    if (emoji === '✅') { emoji = '🌟'; title = 'Sunnah reward!'; }
+  }
+
   if (evaluation.milestoneRewardsGranted.length) {
     messages.push(`🏆 Milestone reward unlocked for ${evaluation.milestoneRewardsGranted.join(', ')} day streak.`);
     emoji = '🏆';
@@ -1017,10 +1032,12 @@ function evaluateSubmissionOutcome(entry, progress) {
   const noJamatCount = statuses.filter((v) => v === 'no-jamat').length;
   const qazaCount    = statuses.filter((v) => v === 'qaza').length;
 
-  // Perfect Takbeer day: all Jamat + all Takbeer + all Sunnah at max
+  // Perfect Takbeer day: all Jamat + all Takbeer + all Sunnah at max → streak+2, lifeline+1
   const allTakbeer  = statuses.every((v) => v === 'jamat') && takbeers.every(Boolean);
+  const allJamat    = statuses.every((v) => v === 'jamat');
   const allSunnat   = PRAYERS.every((p) => (entry[p].sunnat || 0) >= SUNNAT_MAX[p]);
-  const perfectTakbeerDay = allTakbeer && allSunnat;
+  const perfectTakbeerDay  = allTakbeer && allSunnat;       // streak+2, lifeline+1
+  const allJamatSunnatDay  = allJamat   && allSunnat && !allTakbeer; // streak+1, lifeline+1
 
   let streak = progress.streak + 1;
   let checkpoint = highestCheckpointAtOrBelow(streak);
@@ -1034,6 +1051,7 @@ function evaluateSubmissionOutcome(entry, progress) {
   let breakReason = null;
   let lifelineUsed = false;
   let dailyRewardGranted = false;
+  let sunnatRewardGranted = false;
   const milestoneRewardsGranted = [];
   const lifelineEvents = [];
 
@@ -1123,6 +1141,18 @@ function evaluateSubmissionOutcome(entry, progress) {
     });
   }
 
+  // All-Jamat + All-Sunnah reward: lifeline +1, streak +1 (normal)
+  if (!streakBroken && !streakDecremented && !lifelineUsed && allJamatSunnatDay) {
+    currentLifelines += 1;
+    lifelinesEarned += 1;
+    sunnatRewardGranted = true;
+    lifelineEvents.push({
+      event_type: 'earn',
+      count_change: 1,
+      reason: 'All Jamat + All Sunnah day (+1 lifeline)'
+    });
+  }
+
   for (const milestone of MILESTONE_REWARDS) {
     if (streak >= milestone && !milestoneRewards.includes(milestone)) {
       milestoneRewards.push(milestone);
@@ -1150,6 +1180,7 @@ function evaluateSubmissionOutcome(entry, progress) {
     breakReason,
     lifelineUsed,
     dailyRewardGranted,
+    sunnatRewardGranted,
     milestoneRewardsGranted,
     lifelineEvents
   };
@@ -1205,8 +1236,18 @@ async function loadMyHistory() {
     return;
   }
 
-  tbody.innerHTML = data.map((row) => `
-    <tr>
+  tbody.innerHTML = data.map((row) => {
+    const isAdminLog = row.fajr_status === 'admin' || row.fajr === 'admin';
+    if (isAdminLog) {
+      return `<tr style="background:#f0fdf9;">
+        <td>${displayDate(row.entry_date)}</td>
+        <td colspan="5" style="color:#0f766e;font-weight:600">⚙️ ${escapeHtml(row.break_reason || 'Admin change')}</td>
+        <td>-</td>
+        <td>-</td>
+        <td>${formatTimestamp(row.submitted_at)}</td>
+      </tr>`;
+    }
+    return `<tr>
       <td>${displayDate(row.entry_date)}</td>
       <td>${renderPrayerStatus(row.fajr_status || row.fajr, row.fajr_takbeer)}${row.fajr_sunnat > 0 ? ` <small class="sunnat-badge">${row.fajr_sunnat}S</small>` : ''}</td>
       <td>${renderPrayerStatus(row.zuhr_status || row.zuhr, row.zuhr_takbeer)}${row.zuhr_sunnat > 0 ? ` <small class="sunnat-badge">${row.zuhr_sunnat}S</small>` : ''}</td>
@@ -1216,8 +1257,8 @@ async function loadMyHistory() {
       <td>${row.lifeline_used ? 'Yes' : 'No'}</td>
       <td>${escapeHtml(row.break_reason || '-')}</td>
       <td>${formatTimestamp(row.submitted_at)}</td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 function renderPrayerStatus(status, takbeer) {
@@ -1505,20 +1546,31 @@ async function loadAdminUserDetails(userId) {
   const history = historyRes.data || [];
 
   tbody.innerHTML = history.length
-    ? history.map((row) => `
-      <tr>
-        <td>${displayDate(row.entry_date)}</td>
-        <td>${renderPrayerStatus(row.fajr_status || row.fajr, row.fajr_takbeer)}</td>
-        <td>${renderPrayerStatus(row.zuhr_status || row.zuhr, row.zuhr_takbeer)}</td>
-        <td>${renderPrayerStatus(row.asr_status || row.asr, row.asr_takbeer)}</td>
-        <td>${renderPrayerStatus(row.maghrib_status || row.maghrib, row.maghrib_takbeer)}</td>
-        <td>${renderPrayerStatus(row.isha_status || row.isha, row.isha_takbeer)}</td>
-        <td>${row.streak_before_submission ?? '-'}</td>
-        <td>${row.streak_after_submission ?? '-'}</td>
-        <td>${escapeHtml(row.break_reason || '-')}</td>
-        <td><button class="btn btn-danger btn-small delete-entry-btn" data-entry-id="${row.id}">Delete</button></td>
-      </tr>
-    `).join('')
+    ? history.map((row) => {
+        const isAdminLog = row.fajr_status === 'admin' || row.fajr === 'admin';
+        if (isAdminLog) {
+          return `<tr style="background:#f0fdf9;">
+            <td>${displayDate(row.entry_date)}</td>
+            <td colspan="5" style="color:#0f766e;font-weight:600">⚙️ ${escapeHtml(row.break_reason || 'Admin change')}</td>
+            <td>${row.streak_before_submission ?? '-'}</td>
+            <td>${row.streak_after_submission ?? '-'}</td>
+            <td>Admin log</td>
+            <td>-</td>
+          </tr>`;
+        }
+        return `<tr>
+          <td>${displayDate(row.entry_date)}</td>
+          <td>${renderPrayerStatus(row.fajr_status || row.fajr, row.fajr_takbeer)}</td>
+          <td>${renderPrayerStatus(row.zuhr_status || row.zuhr, row.zuhr_takbeer)}</td>
+          <td>${renderPrayerStatus(row.asr_status || row.asr, row.asr_takbeer)}</td>
+          <td>${renderPrayerStatus(row.maghrib_status || row.maghrib, row.maghrib_takbeer)}</td>
+          <td>${renderPrayerStatus(row.isha_status || row.isha, row.isha_takbeer)}</td>
+          <td>${row.streak_before_submission ?? '-'}</td>
+          <td>${row.streak_after_submission ?? '-'}</td>
+          <td>${escapeHtml(row.break_reason || '-')}</td>
+          <td><button class="btn btn-danger btn-small delete-entry-btn" data-entry-id="${row.id}">Delete</button></td>
+        </tr>`;
+      }).join('')
     : '<tr><td colspan="10" class="no-data">No history for this user</td></tr>';
 
   document.getElementById('admin-user-detail-empty').classList.add('hidden');
