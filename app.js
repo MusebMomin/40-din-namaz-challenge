@@ -1651,6 +1651,7 @@ async function adminSetStreak() {
 
   await loadAdminUsers();
   await updateLeaderboard();
+  await loadAdminUserDetails(appState.selectedAdminUserId);
 
   await showPopup({
     title: 'Streak updated',
@@ -1723,6 +1724,7 @@ async function adminAdjustLifelines() {
 
   await loadAdminUsers();
   await updateLeaderboard();
+  await loadAdminUserDetails(appState.selectedAdminUserId);
 
   await showPopup({
     title: 'Lifelines updated',
